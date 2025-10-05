@@ -1,0 +1,15 @@
+{
+  "root": true,
+  "env": { "es2021": true, "node": true },
+  "extends": [
+    "next/core-web-vitals",
+    "eslint:recommended",
+    "prettier"
+  ],
+  "ignorePatterns": [
+    "prisma/**",
+    "scripts/**",
+    "*.mjs"
+  ],
+  "rules": {}
+}

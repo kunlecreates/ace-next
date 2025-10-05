@@ -1,0 +1,44 @@
+image:
+  repository: ghcr.io/OWNER/REPO/acegrocer # TODO: set real GHCR path
+  tag: latest
+
+replicaCount: 1 # SQLite single-replica; switch to Postgres before scaling
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: ace-next.kunlecreates.org
+      paths:
+        - path: /
+          pathType: Prefix
+
+persistence:
+  enabled: true
+  size: 2Gi
+  storageClassName: local-storage
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 1
+    memory: 1Gi
+
+env:
+  NODE_ENV: production
+  PORT: "3000"
+  COOKIE_NAME: acegrocer_auth
+  COOKIE_SAMESITE: Strict
+  COOKIE_SECURE: "true"
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_WINDOW_MS: "60000"
+  RATE_LIMIT_MAX: "120"
+  DATABASE_URL: file:./prisma/dev.db
+
+secret:
+  create: false
+  name: ""

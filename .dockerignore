@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+.next/cache
+.git
+.github
+.vscode
+.DS_Store
+*.local
+*.log
+coverage
+playwright-report
+test-results
+.env
+.env.*

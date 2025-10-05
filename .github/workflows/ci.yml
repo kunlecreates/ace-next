@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Security audit (advisories only)
+        run: npm audit --audit-level=high || true
+      - run: npm run lint
+      - run: npm run type-check
+      - name: Run unit tests
+        run: npm run test:unit
+      - run: npm run build
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+      - name: Run E2E tests (Chromium)
+        env:
+          NODE_ENV: test
+        run: npm run test:e2e -- --project=chromium --workers=1 --retries=0
+
+  docker:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest
+            type=sha
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: docker
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      deployments: write
+    steps:
+      - name: Create GitHub Deployment (production)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ref = context.sha
+            const env = 'production'
+            const description = `Deployed container tags: ${process.env.IMAGE_TAGS}`
+            const { data: deployment } = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref,
+              environment: env,
+              auto_merge: false,
+              required_contexts: [],
+              description,
+              transient_environment: false,
+              production_environment: true,
+            })
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: deployment.id,
+              state: 'success',
+              environment: env,
+              environment_url: `https://ghcr.io/${context.repo.owner}/${context.repo.repo}`,
+              log_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              description,
+            })
+        env:
+          IMAGE_TAGS: ${{ needs.docker.outputs.tags }}
+
+  # Deployment to a runtime (e.g. Vercel, Azure, etc.) can be added here once secrets are available.
+  # Current pipeline publishes container images to GHCR in the 'docker' job.
+
+  security:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: OSV Scanner
+        uses: google/osv-scanner-action@v1
+        with:
+          scan-args: "."
+        continue-on-error: true

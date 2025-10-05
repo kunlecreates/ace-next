@@ -1,0 +1,111 @@
+name: CD - Kubernetes (Helm)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_repo:
+        description: 'GHCR image repository (e.g., ghcr.io/<owner>/<repo>/acegrocer)'
+        required: false
+      image_tag:
+        description: 'Container image tag (defaults to commit SHA)'
+        required: false
+      namespace:
+        description: 'Kubernetes namespace (defaults to acegrocer-staging)'
+        required: false
+      values_file:
+        description: 'Path to Helm values file (defaults to k8s/staging.values.yaml)'
+        required: false
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: self-hosted
+    env:
+      RELEASE_NAME: acegrocer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.0
+
+      - name: Compute parameters
+        run: |
+          NAMESPACE="${{ inputs.namespace }}"
+          if [ -z "$NAMESPACE" ]; then NAMESPACE="acegrocer-staging"; fi
+          IMAGE_REPO="${{ inputs.image_repo }}"
+          if [ -z "$IMAGE_REPO" ]; then IMAGE_REPO="ghcr.io/${GITHUB_REPOSITORY}"; fi
+          IMAGE_TAG="${{ inputs.image_tag }}"
+          if [ -z "$IMAGE_TAG" ]; then IMAGE_TAG="${GITHUB_SHA}"; fi
+          VALUES_FILE="${{ inputs.values_file }}"
+          if [ -z "$VALUES_FILE" ]; then VALUES_FILE="k8s/staging.values.yaml"; fi
+          echo "NAMESPACE=$NAMESPACE" >> $GITHUB_ENV
+          echo "IMAGE_REPO=$IMAGE_REPO" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          echo "VALUES_FILE=$VALUES_FILE" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Kubeconfig
+        run: |
+          echo "$KUBECONFIG_DATA" | base64 -d > kubeconfig
+          echo "KUBECONFIG=$PWD/kubeconfig" >> $GITHUB_ENV
+        shell: bash
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG_DATA_BASE64 }}
+
+      - name: Validate inputs
+        run: |
+          if [ -z "$IMAGE_REPO" ]; then echo "ERROR: IMAGE_REPO not set"; exit 1; fi
+        shell: bash
+
+      - name: Create namespace if missing
+        run: kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create/Update Secret (app)
+        run: |
+          kubectl -n "$NAMESPACE" apply -f - <<EOF
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: ${RELEASE_NAME}-secrets
+          type: Opaque
+          stringData:
+            JWT_SECRET: "${{ secrets.JWT_SECRET }}"
+            DATABASE_URL: "file:./prisma/dev.db"
+          EOF
+
+      - name: Helm upgrade/install
+        run: |
+          # Lint chart with given values
+          helm lint ./charts/acegrocer -f "$VALUES_FILE" \
+            --set image.repository="$IMAGE_REPO" \
+            --set image.tag="$IMAGE_TAG" \
+            --set secret.name="${RELEASE_NAME}-secrets"
+
+          # Upgrade/Install release
+          helm upgrade --install "$RELEASE_NAME" ./charts/acegrocer \
+            --namespace "$NAMESPACE" \
+            --set image.repository="$IMAGE_REPO" \
+            --set image.tag="$IMAGE_TAG" \
+            --set secret.name="${RELEASE_NAME}-secrets" \
+            -f "$VALUES_FILE" \
+            --wait --timeout 10m
+
+      - name: Wait for rollout
+        run: kubectl -n "$NAMESPACE" rollout status deployment/$(kubectl -n "$NAMESPACE" get deploy -l app.kubernetes.io/instance=$RELEASE_NAME -o jsonpath='{.items[0].metadata.name}') --timeout=600s
+
+      - name: Smoke test
+        run: |
+          # Try cluster IP first
+          kubectl -n "$NAMESPACE" run curl --rm -it --image=curlimages/curl:8.8.0 --restart=Never -- \
+            -fsS http://$RELEASE_NAME.$NAMESPACE.svc.cluster.local:3000/api/health
