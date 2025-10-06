@@ -39,8 +39,7 @@ export async function GET(req: Request) {
     return badRequest('Invalid query', query.error.flatten())
   }
 
-  type FindManyArgs = Parameters<typeof prisma.order.findMany>[0]
-  const where: NonNullable<FindManyArgs>['where'] = {}
+  const where: Record<string, any> = {}
   if (query.data.status) {
     where.status = query.data.status
   }
@@ -64,10 +63,10 @@ export async function GET(req: Request) {
   // Sorting
   const sortField = query.data.sort || 'createdAt'
   const sortOrder = (query.data.order || 'desc') as 'asc' | 'desc'
-  let orderBy: NonNullable<FindManyArgs>['orderBy'] = { createdAt: sortOrder }
+  let orderBy: Record<string, any> = { createdAt: sortOrder }
   if (sortField === 'totalCents') orderBy = { totalCents: sortOrder }
   else if (sortField === 'status') orderBy = { status: sortOrder }
-  else if (sortField === 'userEmail') orderBy = { user: { email: sortOrder } } as any
+  else if (sortField === 'userEmail') orderBy = { user: { email: sortOrder } }
 
   // Pagination
   const page = query.data.page ?? 1

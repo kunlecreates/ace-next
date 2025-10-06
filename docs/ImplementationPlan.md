@@ -36,6 +36,7 @@ This plan maps PRD requirements to concrete deliverables in this repository (Nex
 - Icons via `lucide-react` and toast notifications via `sonner` (mounted `AppToaster`).
 - Navigation polish: added `ActiveLink` for active-route styling in the header (bold + underline).
 - Product grid polish: card-based layout with price badge, SKU/stock meta, and Quick Add to cart button.
+- Robust product images with a SafeImage fallback to a secondary URL; Next Image `remotePatterns` configured for Unsplash/Picsum.
 - Cart flows: improved buttons/inputs, success/error toasts, and header cart badge auto-updates via `cart:updated` event.
 - Admin pages: modernized tables for products and orders with consistent styling.
 
@@ -122,6 +123,7 @@ This plan maps PRD requirements to concrete deliverables in this repository (Nex
 
 ## Acceptance criteria (Phase 3 UI polish)
 - Dark/light theme toggle in header — DONE
+- Current behavior: toggle shows the active theme label/icon; knob position reflects current theme. Optional future tweak: invert labels/knob to preview the target theme before switching.
 - Active nav highlighting in header — DONE
 - Product grid has Quick Add to cart — DONE
 - Toast feedback for cart actions — DONE
@@ -145,37 +147,39 @@ This plan maps PRD requirements to concrete deliverables in this repository (Nex
 - Admin orders API hardened with proper 403/404 and Zod validation; server action updates status in UI.
 - Metrics enriched with per-route labels; Prometheus exposition at /api/metrics/prom.
 - Deterministic tests: seeded data (Bananas) and API-based auth to stabilize E2E.
- - UI modernization: Tailwind v4 + shadcn-style primitives, theme toggle, lucide icons, sonner toasts, header ActiveLink, QuickAdd on product grid.
+ - UI modernization: Tailwind v4 + shadcn-style primitives, theme toggle, lucide icons, sonner toasts, header ActiveLink, QuickAdd on product grid, and SafeImage for resilient product images.
 
 ## Next phase: actionable TODOs
-1) ARC/CD readiness & first deploy
+1) Observability (high impact)
+  - Add histograms (p50/p90/p99) to metrics and wire /api/metrics/prom accordingly.
+  - Introduce OpenTelemetry tracing (incoming HTTP + Prisma) with OTLP export; provide a minimal Grafana/Tempo example dashboard.
+2) ARC/CD readiness & first deploy
   - Install ARC controller and a runner scale set via Helm per `docs/arc-setup.md` (GitHub App auth, secret in runners namespace). Use `INSTALLATION_NAME=acegrocer-runnerset`.
   - Create cross-namespace RBAC; ensure a runner is Ready in `acegrocer-runners` and can reach the cluster API.
   - Configure repo secrets: `JWT_SECRET` (required), optional `GHCR_READ_USERNAME`/`GHCR_READ_TOKEN` for private image pulls.
   - Run CI to build/push, then trigger CD with staging defaults. Confirm rollout/ingress health.
-2) Production rollout path
+3) Production rollout path
   - Use the new `use_prod` and `prod_namespace` inputs in CD to deploy with `k8s/prod.values.yaml`. Optionally add a protected GitHub Environment for prod with approvals and set environment_url.
-3) Dev API docs
+4) Dev API docs
   - Swagger UI at /api/docs/ui — DONE
   - Expand OpenAPI coverage to 100% (ensure all response/error shapes documented; include examples). Consider generating a Postman collection from OpenAPI.
-4) DB indexes & data hygiene
+5) DB indexes & data hygiene
   - SQLite: using a standard UNIQUE index on User.emailLower — DONE (seed backfills).
   - If migrating to Postgres later, consider partial unique indexes appropriately; document migration path.
-5) CI/CD & security posture
+6) CI/CD & security posture
   - CD: finalized (ARC-only, in-cluster). Keep repo secrets current; consider adding a GitHub Environment for prod with protection rules. Optionally set environment_url in CD on success.
   - Migrations: add Helm hook Job to run `npx prisma migrate deploy` when moving to Postgres/MySQL; optional seeded admin Job gated by env.
   - Enable Dependabot/Renovate; keep npm audit/OSV as non-blocking info gates.
   - Revisit cookie SameSite=Strict in prod (verify flows); document CSRF posture (JSON APIs only now; add double-submit if forms introduced).
-6) Observability
-  - Add histogram buckets (p50/p90/p99) to metrics; expose in /api/metrics and /api/metrics/prom; add a minimal Grafana dashboard JSON.
-  - Add OpenTelemetry tracing: inbound request spans + Prisma/DB spans; optional exporter to OTLP/console.
 7) Tests
   - Contract tests: validate API responses against the OpenAPI schema.
   - Add pagination/filters coverage where missing; keep API-based login in E2E for stability; shard E2E in CI and archive traces on failure.
+  - Windows reliability: keep Prisma regenerate off during test reset; add retry/backoff around db push/seed to reduce EPERM noise locally.
 8) UX/Polish
   - Product images (optional) and skeleton loaders for grid/detail.
   - Admin tables: zebra striping, sticky header, mobile responsive stacking.
   - Broaden toast usage for admin actions; add loading spinners on long-running actions.
   - Basic a11y sweep (landmarks, focus ring consistency, aria-live for toasts where helpful).
+  - Theme toggle: consider compact width (w-28) and "target theme" preview (labels/knob show what comes next); ensure aria-label reflects target state.
 9) Performance/readiness
   - Add a small load test harness (k6/Artillery) and an optional CI smoke load.

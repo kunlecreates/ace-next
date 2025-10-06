@@ -30,8 +30,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
   if (pageSize) qs.set('pageSize', pageSize)
 
   // Build Prisma query based on filters
-  type FindManyArgs = Parameters<typeof prisma.order.findMany>[0]
-  const where: NonNullable<FindManyArgs>['where'] = {}
+  const where: Record<string, any> = {}
   if (activeStatus) {
     where.status = activeStatus
   }
@@ -56,10 +55,10 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
 
   const sortField = (sort || 'createdAt') as 'createdAt' | 'totalCents' | 'status' | 'userEmail'
   const sortOrder = (order || 'desc') as 'asc' | 'desc'
-  let orderBy: NonNullable<FindManyArgs>['orderBy'] = { createdAt: sortOrder }
+  let orderBy: Record<string, any> = { createdAt: sortOrder }
   if (sortField === 'totalCents') orderBy = { totalCents: sortOrder }
   else if (sortField === 'status') orderBy = { status: sortOrder }
-  else if (sortField === 'userEmail') orderBy = { user: { email: sortOrder } } as any
+  else if (sortField === 'userEmail') orderBy = { user: { email: sortOrder } }
 
   const currentPage = Number(page || '1')
   const currentPageSize = Number(pageSize || '20')

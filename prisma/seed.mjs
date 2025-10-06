@@ -19,10 +19,10 @@ async function main() {
   if (count === 0) {
     await prisma.product.createMany({
       data: [
-        { name: 'Bananas', description: 'Fresh bananas', priceCents: 199, sku: 'BNN-001', category: 'Fruit', stock: 120 },
-        { name: 'Apples', description: 'Crisp apples', priceCents: 299, sku: 'APL-001', category: 'Fruit', stock: 80 },
-        { name: 'Milk 2% 1L', description: 'Dairy milk', priceCents: 249, sku: 'MLK-2-1L', category: 'Dairy', stock: 50 },
-        { name: 'Bread Loaf', description: 'Whole wheat bread', priceCents: 349, sku: 'BRD-001', category: 'Bakery', stock: 40 }
+        { name: 'Bananas', description: 'Fresh bananas', priceCents: 199, sku: 'BNN-001', category: 'Fruit', stock: 120, imageUrl: 'https://images.unsplash.com/photo-1571772805064-2076a4cacc0a?q=80&w=1200&auto=format&fit=crop' },
+        { name: 'Apples', description: 'Crisp apples', priceCents: 299, sku: 'APL-001', category: 'Fruit', stock: 80, imageUrl: 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?q=80&w=1200&auto=format&fit=crop' },
+        { name: 'Milk 2% 1L', description: 'Dairy milk', priceCents: 249, sku: 'MLK-2-1L', category: 'Dairy', stock: 50, imageUrl: 'https://images.unsplash.com/photo-1580983559361-9b3c5b8a76b4?q=80&w=1200&auto=format&fit=crop' },
+        { name: 'Bread Loaf', description: 'Whole wheat bread', priceCents: 349, sku: 'BRD-001', category: 'Bakery', stock: 40, imageUrl: 'https://images.unsplash.com/photo-1549931319-a545dcf3bc73?q=80&w=1200&auto=format&fit=crop' }
       ],
     })
   }

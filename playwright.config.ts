@@ -2,6 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  // Only run E2E specs; ignore unit tests so Vitest imports are never evaluated by Playwright
+  testIgnore: ['**/tests/unit/**'],
+  testMatch: ['**/*.spec.ts'],
   timeout: 30_000,
   expect: { timeout: 5000 },
   fullyParallel: true,

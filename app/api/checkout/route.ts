@@ -3,8 +3,7 @@ import { badRequest, unauthorized } from '@/lib/http'
 import { prisma } from '@/lib/db'
 import { getUserFromCookie } from '@/lib/session'
 import { z } from 'zod'
-// Infer the transaction client type from prisma.$transaction to avoid direct Prisma type import
-type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+// Using any for tx typing due to missing Prisma TransactionClient type in generated d.ts
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -47,7 +46,7 @@ export async function POST(req: Request) {
 
   const totalCents = cartItems.reduce((sum: number, it: { qty: number; product: { priceCents: number } }) => sum + it.qty * it.product.priceCents, 0)
 
-  const order = await prisma.$transaction(async (tx: TxClient) => {
+  const order = await prisma.$transaction(async (tx: any) => {
     const order = await tx.order.create({ data: { userId: user.id, totalCents, status: 'PENDING' } })
     for (const it of cartItems) {
       await tx.orderItem.create({ data: { orderId: order.id, productId: it.productId, qty: it.qty, priceCents: it.product.priceCents } })

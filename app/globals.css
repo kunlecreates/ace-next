@@ -1,72 +1,108 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+/* Ensure Tailwind scans the whole app when dev is started from different CWDs */
+@source "..";
+/* Safelist specific utilities we rely on across routes (responsive variants included) */
+@source inline("gap-3 {sm:}gap-5");
+
+/* Tailwind v4 theme color tokens mapped to our CSS variables */
+@theme {
+	--color-background: hsl(var(--background));
+	--color-foreground: hsl(var(--foreground));
+	--color-border: hsl(var(--border));
+	--color-input: hsl(var(--input));
+	--color-ring: hsl(var(--ring));
+
+	--color-primary: hsl(var(--primary));
+	--color-primary-foreground: hsl(var(--primary-foreground));
+	--color-secondary: hsl(var(--secondary));
+	--color-secondary-foreground: hsl(var(--secondary-foreground));
+	--color-accent: hsl(var(--accent));
+	--color-accent-foreground: hsl(var(--accent-foreground));
+	--color-muted: hsl(var(--muted));
+	--color-muted-foreground: hsl(var(--muted-foreground));
+	--color-destructive: hsl(var(--destructive));
+	--color-destructive-foreground: hsl(var(--destructive-foreground));
+	--color-popover: hsl(var(--popover));
+	--color-popover-foreground: hsl(var(--popover-foreground));
+	--color-card: hsl(var(--card));
+	--color-card-foreground: hsl(var(--card-foreground));
+}
+
+@layer base {
+	* {
+		@apply border-border;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
+}
 
 /* CSS variables (tokens) for theming */
 :root {
-	--background: 210 20% 98%;
-	--foreground: 222.2 47.4% 11.2%;
+	/* Warm retail (light) */
+	--background: 30 33% 98%;
+	--foreground: 24 40% 15%;
 
 	--card: 0 0% 100%;
-	--card-foreground: 222.2 47.4% 11.2%;
+	--card-foreground: 24 40% 15%;
 
 	--popover: 0 0% 100%;
-	--popover-foreground: 222.2 47.4% 11.2%;
+	--popover-foreground: 24 40% 15%;
 
-	--primary: 222.2 83.2% 52.9%;
-	--primary-foreground: 210 40% 98%;
+	--primary: 35 92% 50%; /* amber */
+	--primary-foreground: 24 40% 10%;
 
-	--secondary: 210 40% 96.1%;
-	--secondary-foreground: 222.2 47.4% 11.2%;
+	--secondary: 35 100% 96%;
+	--secondary-foreground: 24 40% 15%;
 
-	--muted: 210 40% 96.1%;
-	--muted-foreground: 215.4 16.3% 46.9%;
+	--muted: 35 35% 96%;
+	--muted-foreground: 24 15% 40%;
 
-	--accent: 210 40% 96.1%;
-	--accent-foreground: 222.2 47.4% 11.2%;
+	--accent: 28 90% 53%; /* warm orange */
+	--accent-foreground: 24 40% 10%;
 
-	--destructive: 0 84.2% 60.2%;
+	--destructive: 0 84% 60%;
 	--destructive-foreground: 210 40% 98%;
 
-	--border: 214.3 31.8% 91.4%;
-	--input: 214.3 31.8% 91.4%;
-	--ring: 222.2 83.2% 52.9%;
+	--border: 24 20% 90%;
+	--input: 24 20% 90%;
+	--ring: 24 94% 50%;
 
 	--radius: 0.5rem;
 }
 
 .dark {
-	--background: 222.2 84% 4.9%;
-	--foreground: 210 40% 98%;
+	/* Warm retail (dark) */
+	--background: 24 20% 8%;
+	--foreground: 24 30% 96%;
 
-	--card: 222.2 84% 4.9%;
-	--card-foreground: 210 40% 98%;
+	--card: 24 20% 10%;
+	--card-foreground: 24 30% 96%;
 
-	--popover: 222.2 84% 4.9%;
-	--popover-foreground: 210 40% 98%;
+	--popover: 24 20% 10%;
+	--popover-foreground: 24 30% 96%;
 
-	--primary: 217.2 91.2% 59.8%;
-	--primary-foreground: 222.2 47.4% 11.2%;
+	--primary: 24 94% 55%;
+	--primary-foreground: 24 70% 10%;
 
-	--secondary: 217.2 32.6% 17.5%;
+	--secondary: 24 15% 16%;
 	--secondary-foreground: 210 40% 98%;
 
-	--muted: 217.2 32.6% 17.5%;
-	--muted-foreground: 215 20.2% 65.1%;
+	--muted: 24 15% 16%;
+	--muted-foreground: 24 20% 70%;
 
-	--accent: 217.2 32.6% 17.5%;
-	--accent-foreground: 210 40% 98%;
+	--accent: 14 80% 60%;
+	--accent-foreground: 24 20% 10%;
 
-	--destructive: 0 62.8% 30.6%;
+	--destructive: 0 62% 34%;
 	--destructive-foreground: 210 40% 98%;
 
-	--border: 217.2 32.6% 17.5%;
-	--input: 217.2 32.6% 17.5%;
-	--ring: 224.3 76.3% 48%;
+	--border: 24 15% 18%;
+	--input: 24 15% 18%;
+	--ring: 24 94% 55%;
 }
 
-/* Ensure base styles apply even if Tailwind isn't processing @layer in dev */
-* { border-color: hsl(var(--border)); }
+/* Remove heavy global overrides; rely on Tailwind utilities and tokens */
 body {
 	background-color: hsl(var(--background));
 	color: hsl(var(--foreground));
@@ -93,3 +129,6 @@ a { color: hsl(var(--foreground)); }
 
 /* Container rhythm helper */
 .container { max-width: 1200px; }
+
+/* Tailwind safelist hint: ensure these utilities are referenced so they are emitted */
+/* gap-3 sm:gap-5 */

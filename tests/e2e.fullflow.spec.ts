@@ -26,9 +26,9 @@ test('customer checkout and admin status update end-to-end', async ({ page, base
   await page.getByLabel(/^password$/i).fill(PASSWORD)
   await page.getByRole('button', { name: /sign in|login/i }).click()
   // Ensure the login navigation completes
-  await expect(page.getByRole('heading', { name: 'Acegrocer' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Acegrocer' })).toBeVisible()
   // Wait for navigation and app hydration after login
-  await expect(page.getByRole('heading', { name: 'Acegrocer' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Acegrocer' })).toBeVisible()
   await expect(page).toHaveURL(new RegExp(`${baseURL?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') || ''}/?`))
 
   // Add a specific seeded product to cart to avoid interference from other tests
@@ -83,7 +83,7 @@ test('customer checkout and admin status update end-to-end', async ({ page, base
   await page.getByLabel(/^password$/i).fill(PASSWORD)
   await page.getByRole('button', { name: /sign in|login/i }).click()
   // Wait until server recognizes admin role
-  await expect(page.getByRole('heading', { name: 'Acegrocer' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Acegrocer' })).toBeVisible()
   await page.waitForFunction(async () => {
     try {
       const res = await fetch('/api/me', { cache: 'no-store', credentials: 'include' })

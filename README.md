@@ -53,6 +53,28 @@ npm.cmd run test:e2e
 
 ## Notes
 
+### Tailwind CSS v4 setup (important)
+
+This project uses Tailwind CSS v4 with the dedicated PostCSS plugin.
+
+- PostCSS: `@tailwindcss/postcss` is configured in `postcss.config.js`.
+- CSS entry: We import Tailwind with `@import "tailwindcss";` in `app/globals.css`.
+- Class detection: v4 auto-detects content. To make detection stable when the dev server is started from different folders, we add `@source "..";` in `globals.css`.
+- Safelisting utilities in v4: JS `safelist` is not supported anymore. We safelist critical utilities with `@source inline()`. Example used here to guarantee header spacing:
+
+```
+@source inline("gap-3 {sm:}gap-5");
+```
+
+This emits both `gap-3` and the responsive `sm:gap-5` utility even if the scanner misses them.
+
+Theme toggle
+- Implemented with `next-themes`. The current implementation shows the active theme label/icon and moves the knob to the active side. Tooltip/aria label announce a generic toggle.
+- Optionally, you can flip labels and the knob to preview the target theme (the state you'll switch into next). If you want that behavior, update `components/ThemeToggle.tsx` accordingly and set the title/aria-label to "Switch to light|dark mode".
+
+Images
+- Product images use a small `SafeImage` wrapper to fall back to a secondary URL if the primary fails. Next Image `remotePatterns` allow Unsplash and Picsum.
+
 ### API error shape
 
 All API error responses follow a consistent JSON structure:
@@ -73,6 +95,7 @@ Validation errors include a Zod issues object for client-side mapping.
 - During DB resets, Prisma on Windows can print a benign warning:
 	`EPERM: operation not permitted, unlink ...query_engine-windows.dll.node`. This does not affect tests.
 - Playwright E2E config seeds and resets the SQLite DB before each run.
+ - If the EPERM appears frequently during local E2E, retry the reset step or avoid forcing a client regenerate during tests.
 
 ## Testing (Windows PowerShell)
 

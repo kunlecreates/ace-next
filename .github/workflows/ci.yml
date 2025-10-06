@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  unit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,8 +22,20 @@ jobs:
       - run: npm run type-check
       - name: Run unit tests
         run: npm run test:unit
-      - run: npm run build
-      - name: Install Playwright Browsers
+
+  e2e:
+    needs: unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Build app
+        run: npm run build
+      - name: Install Playwright Browsers (Chromium only)
         run: npx playwright install --with-deps chromium
       - name: Run E2E tests (Chromium)
         env:
@@ -33,7 +45,7 @@ jobs:
 
   docker:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build
+    needs: [unit, e2e]
     runs-on: ubuntu-latest
     outputs:
       tags: ${{ steps.meta.outputs.tags }}
@@ -113,7 +125,7 @@ jobs:
   # Current pipeline publishes container images to GHCR in the 'docker' job.
 
   security:
-    needs: build
+    needs: unit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

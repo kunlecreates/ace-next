@@ -27,8 +27,7 @@ export async function GET(req: Request) {
     return badRequest('Invalid query', parsed.error.flatten())
   }
   const { search, category, minPrice, maxPrice } = parsed.data
-  type FindManyArgs = Parameters<typeof prisma.product.findMany>[0]
-  const where: NonNullable<FindManyArgs>['where'] = {}
+  const where: Record<string, any> = {}
   if (search) where.OR = [
     { name: { contains: search } },
     { description: { contains: search } },
@@ -36,9 +35,9 @@ export async function GET(req: Request) {
   if (category) where.category = category
   if (minPrice || maxPrice) {
     where.priceCents = {
-      ...(minPrice ? { gte: Number(minPrice) } : {}),
-      ...(maxPrice ? { lte: Number(maxPrice) } : {}),
-    } as NonNullable<NonNullable<FindManyArgs>['where']>['priceCents']
+      ...(minPrice !== undefined ? { gte: Number(minPrice) } : {}),
+      ...(maxPrice !== undefined ? { lte: Number(maxPrice) } : {}),
+    }
   }
 
   const products = await prisma.product.findMany({ where, orderBy: { createdAt: 'desc' } })
