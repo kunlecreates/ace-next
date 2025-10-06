@@ -30,8 +30,26 @@ npm run start
 - Middleware security headers + CSP/HSTS, basic rate limiting (env-configurable)
 - Request timing logs and in-memory metrics exposed at /api/metrics
 - Dev-only OpenAPI JSON at /api/docs (generated from Zod schemas)
+- Tailwind v4 + shadcn-style UI primitives, theme toggle (next-themes), lucide icons, sonner toasts
 
 ## Scripts
+Common scripts:
+
+```powershell
+# Format code
+npm.cmd run format
+
+# Lint and type-check
+npm.cmd run lint
+npm.cmd run type-check
+
+# Unit tests (Vitest)
+npm.cmd run test:unit
+npm.cmd run test:unit:watch
+
+# E2E tests (Playwright)
+npm.cmd run test:e2e
+```
 
 ## Notes
 
@@ -86,7 +104,7 @@ npm.cmd run dev
 docker build -t acegrocer:local .
 ```
 
-- CI builds and pushes images to GitHub Container Registry (GHCR) on pushes to main as `ghcr.io/<owner>/<repo>:latest` and a `:sha` tag.
+- CI builds and pushes images to GitHub Container Registry (GHCR) on pushes to main as `ghcr.io/kunlecreates/ace-next:latest` and a `:sha` tag.
 
 ## Kubernetes deploy (Helm)
 
@@ -97,6 +115,7 @@ docker build -t acegrocer:local .
 	- When persistence.enabled=true (SQLite), the Deployment uses a Recreate strategy to avoid RWO volume conflicts during upgrades.
 	- For horizontal scaling, migrate to Postgres/MySQL and disable the PVC before increasing replicas.
  - Secrets: The chart does not create Secrets by default. The CD workflow applies a Secret named `<release>-secrets` containing `JWT_SECRET` and `DATABASE_URL`. You can override the name via `--set secret.name=...`.
+ - Runners: Supports in-cluster Actions Runner Controller (ARC). The CD workflow auto-detects ARC and uses in-cluster auth; see `docs/arc-setup.md` for full setup and RBAC.
 
 Basic commands (from a machine with kubectl and helm configured):
 
@@ -104,7 +123,7 @@ Basic commands (from a machine with kubectl and helm configured):
 helm upgrade --install acegrocer charts/acegrocer `
 	-n acegrocer-staging --create-namespace `
 	-f k8s/staging.values.yaml `
-	--set image.repository=ghcr.io/<owner>/<repo>/acegrocer `
+	--set image.repository=ghcr.io/kunlecreates/ace-next `
 	--set image.tag=<sha-or-tag> `
 	--set secret.name="acegrocer-secrets"
 ```
@@ -114,15 +133,26 @@ Validation and CD:
 
 ```powershell
 helm lint charts/acegrocer -f k8s/staging.values.yaml `
-  --set image.repository=ghcr.io/<owner>/<repo>/acegrocer `
-  --set image.tag=<sha-or-tag> `
-  --set secret.name="acegrocer-secrets"
+	--set image.repository=ghcr.io/kunlecreates/ace-next `
+	--set image.tag=<sha-or-tag> `
+	--set secret.name="acegrocer-secrets"
 ```
 
 - See `.github/workflows/cd-k8s.yml` for a self-hosted runner workflow that applies the Secret and performs the Helm upgrade (now includes `helm lint`).
+	- Uses ARC runner scale sets. Set `runs-on: acegrocer-runnerset` (the Helm release name for the runner scale set).
+	- With private GHCR, CD can create a registry pull secret automatically when `GHCR_READ_USERNAME` and `GHCR_READ_TOKEN` repo secrets are set.
+	- Workflow supports a prod toggle: set `use_prod: true` and optionally `prod_namespace` to deploy using `k8s/prod.values.yaml`.
+
+See also: `docs/arc-setup.md` for setting up ARC with a GitHub App, RunnerDeployment, and cross-namespace RBAC.
 
 ### Test stability notes
 
 - Tests authenticate via API calls (not UI) for speed and stability.
 - E2E selects the seeded product “Bananas” to avoid stock race conditions.
+
+## UI verification cheatsheet
+
+- Header shows theme toggle and active link highlighting for the current page.
+- Products page renders a card grid with price badges and a Quick Add button; adding updates the Cart badge and shows a toast.
+- Product detail page supports explicit quantity add; success/error toasts appear accordingly.
 ```

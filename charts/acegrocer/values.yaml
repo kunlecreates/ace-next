@@ -2,9 +2,12 @@
 # These are intended for production; override in your environment-specific values files.
 
 image:
-  repository: ghcr.io/OWNER/REPO/acegrocer
+  repository: ghcr.io/kunlecreates/ace-next
   tag: latest
   pullPolicy: IfNotPresent
+
+# If pulling from a private registry (e.g., private GHCR), specify imagePullSecrets here
+imagePullSecrets: []
 
 replicaCount: 1
 

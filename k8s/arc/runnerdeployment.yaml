@@ -1,0 +1,4 @@
+# NOTE: GitHub-supported ARC uses Helm-based runner scale sets (gha-runner-scale-set) instead of RunnerDeployment CRs.
+# This file is intentionally left as a placeholder to prevent accidental application of the legacy CR.
+# See docs/arc-setup.md for Helm install commands using:
+#   oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set

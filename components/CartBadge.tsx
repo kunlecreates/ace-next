@@ -32,25 +32,6 @@ function useCartCount() {
 
 export default function CartBadge() {
   const count = useCartCount()
-  if (!Number(count)) return <a href="/cart">Cart</a>
-  return (
-    <a href="/cart" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-      Cart
-      <span
-        style={{
-          marginLeft: 6,
-          background: '#111827',
-          color: 'white',
-          borderRadius: 9999,
-          fontSize: 11,
-          lineHeight: '16px',
-          padding: '0 6px',
-          minWidth: 18,
-          textAlign: 'center',
-        }}
-      >
-        {count}
-      </span>
-    </a>
-  )
+  if (!Number(count)) return null
+  return <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/20 px-1.5 text-[11px] leading-4 text-primary">{count}</span>
 }

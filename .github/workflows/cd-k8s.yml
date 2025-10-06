@@ -4,16 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       image_repo:
-        description: 'GHCR image repository (e.g., ghcr.io/<owner>/<repo>/acegrocer)'
+        description: 'GHCR image repository (e.g., ghcr.io/kunlecreates/ace-next)'
         required: false
       image_tag:
         description: 'Container image tag (defaults to commit SHA)'
         required: false
       namespace:
-        description: 'Kubernetes namespace (defaults to acegrocer-staging)'
+        description: 'Kubernetes namespace (defaults to acegrocer-system)'
         required: false
       values_file:
         description: 'Path to Helm values file (defaults to k8s/staging.values.yaml)'
+        required: false
+      use_prod:
+        description: 'Deploy to prod (uses k8s/prod.values.yaml and prod_namespace)'
+        required: false
+      prod_namespace:
+        description: 'Kubernetes namespace for prod (used when use_prod is true; defaults to acegrocer-prod)'
         required: false
   push:
     branches:
@@ -22,7 +28,7 @@ on:
 jobs:
   deploy:
     name: Deploy to Kubernetes
-    runs-on: self-hosted
+    runs-on: acegrocer-runnerset
     env:
       RELEASE_NAME: acegrocer
     steps:
@@ -42,26 +48,64 @@ jobs:
       - name: Compute parameters
         run: |
           NAMESPACE="${{ inputs.namespace }}"
-          if [ -z "$NAMESPACE" ]; then NAMESPACE="acegrocer-staging"; fi
+          if [ -z "$NAMESPACE" ]; then NAMESPACE="acegrocer-system"; fi
           IMAGE_REPO="${{ inputs.image_repo }}"
           if [ -z "$IMAGE_REPO" ]; then IMAGE_REPO="ghcr.io/${GITHUB_REPOSITORY}"; fi
           IMAGE_TAG="${{ inputs.image_tag }}"
           if [ -z "$IMAGE_TAG" ]; then IMAGE_TAG="${GITHUB_SHA}"; fi
           VALUES_FILE="${{ inputs.values_file }}"
           if [ -z "$VALUES_FILE" ]; then VALUES_FILE="k8s/staging.values.yaml"; fi
+
+          # Prod toggle overrides
+          if [ "${{ inputs.use_prod }}" = "true" ]; then
+            VALUES_FILE="k8s/prod.values.yaml"
+            if [ -n "${{ inputs.prod_namespace }}" ]; then
+              NAMESPACE="${{ inputs.prod_namespace }}"
+            else
+              NAMESPACE="acegrocer-prod"
+            fi
+          fi
           echo "NAMESPACE=$NAMESPACE" >> $GITHUB_ENV
           echo "IMAGE_REPO=$IMAGE_REPO" >> $GITHUB_ENV
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
           echo "VALUES_FILE=$VALUES_FILE" >> $GITHUB_ENV
         shell: bash
 
-      - name: Kubeconfig
+      - name: Configure kubeconfig (ARC in-cluster only)
         run: |
-          echo "$KUBECONFIG_DATA" | base64 -d > kubeconfig
-          echo "KUBECONFIG=$PWD/kubeconfig" >> $GITHUB_ENV
+          set -euo pipefail
+          if [ -z "${KUBERNETES_SERVICE_HOST:-}" ]; then
+            echo "ERROR: This workflow requires running inside the cluster on an ARC runner (KUBERNETES_SERVICE_HOST not set)."
+            exit 1
+          fi
+          echo "Configuring in-cluster kubeconfig (ARC runner)"
+          APISERVER="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}"
+          SA_TOKEN_FILE="/var/run/secrets/kubernetes.io/serviceaccount/token"
+          CA_CERT_FILE="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+          KUBECONFIG_PATH="$PWD/kubeconfig"
+          kubectl config set-cluster arc --server="$APISERVER" --certificate-authority="$CA_CERT_FILE" --embed-certs=true --kubeconfig="$KUBECONFIG_PATH"
+          kubectl config set-credentials runner --token="$(cat "$SA_TOKEN_FILE")" --kubeconfig="$KUBECONFIG_PATH"
+          kubectl config set-context arc --cluster=arc --user=runner --kubeconfig="$KUBECONFIG_PATH"
+          kubectl config use-context arc --kubeconfig="$KUBECONFIG_PATH"
+          echo "KUBECONFIG=$KUBECONFIG_PATH" >> $GITHUB_ENV
         shell: bash
+
+      - name: Create/Update imagePullSecret for GHCR (optional)
         env:
-          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG_DATA_BASE64 }}
+          GHCR_READ_USERNAME: ${{ secrets.GHCR_READ_USERNAME }}
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+        run: |
+          if [ -n "$GHCR_READ_USERNAME" ] && [ -n "$GHCR_READ_TOKEN" ]; then
+            kubectl -n "$NAMESPACE" create secret docker-registry ghcr-pull-secret \
+              --docker-server=ghcr.io \
+              --docker-username="$GHCR_READ_USERNAME" \
+              --docker-password="$GHCR_READ_TOKEN" \
+              --docker-email="noreply@github.com" \
+              --dry-run=client -o yaml | kubectl apply -f -
+          else
+            echo "GHCR_READ_USERNAME/GHCR_READ_TOKEN not provided; skipping imagePullSecret creation"
+          fi
+        shell: bash
 
       - name: Validate inputs
         run: |
@@ -72,6 +116,8 @@ jobs:
         run: kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Create/Update Secret (app)
+        env:
+          APP_JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           kubectl -n "$NAMESPACE" apply -f - <<EOF
           apiVersion: v1
@@ -80,7 +126,7 @@ jobs:
             name: ${RELEASE_NAME}-secrets
           type: Opaque
           stringData:
-            JWT_SECRET: "${{ secrets.JWT_SECRET }}"
+            JWT_SECRET: "$APP_JWT_SECRET"
             DATABASE_URL: "file:./prisma/dev.db"
           EOF
 
@@ -90,7 +136,8 @@ jobs:
           helm lint ./charts/acegrocer -f "$VALUES_FILE" \
             --set image.repository="$IMAGE_REPO" \
             --set image.tag="$IMAGE_TAG" \
-            --set secret.name="${RELEASE_NAME}-secrets"
+            --set secret.name="${RELEASE_NAME}-secrets" \
+            --set imagePullSecrets[0].name="ghcr-pull-secret"
 
           # Upgrade/Install release
           helm upgrade --install "$RELEASE_NAME" ./charts/acegrocer \
@@ -98,6 +145,7 @@ jobs:
             --set image.repository="$IMAGE_REPO" \
             --set image.tag="$IMAGE_TAG" \
             --set secret.name="${RELEASE_NAME}-secrets" \
+            --set imagePullSecrets[0].name="ghcr-pull-secret" \
             -f "$VALUES_FILE" \
             --wait --timeout 10m
 

@@ -1,4 +1,5 @@
 import { absoluteUrl } from '@/lib/url'
+import { Button } from '@/components/ui/button'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import CartList from './CartList'
@@ -33,12 +34,12 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
   const stockName = typeof sp?.name === 'string' ? sp?.name : null
   const items = await fetchCart()
   return (
-    <main>
-      <h1>Cart</h1>
-      {success ? <p style={{ color: 'green' }}>Order placed successfully.</p> : null}
-      {empty ? <p style={{ color: 'crimson' }}>Your cart is empty.</p> : null}
+    <main className="container mx-auto p-6">
+      <h1 className="text-2xl font-semibold">Cart</h1>
+      {success ? <p className="mt-2 text-sm text-green-600">Order placed successfully.</p> : null}
+      {empty ? <p className="mt-2 text-sm text-red-600">Your cart is empty.</p> : null}
       {stockErr ? (
-        <p style={{ color: 'crimson' }}>
+        <p className="mt-2 text-sm text-red-600">
           Not enough stock{stockName ? ` for ${stockName}` : ''}. Please adjust quantities.
         </p>
       ) : null}
@@ -47,8 +48,8 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
       ) : (
         <>
           <CartList initialItems={items} />
-          <form method="post" action="/api/checkout">
-            <button type="submit">Checkout (mock)</button>
+          <form method="post" action="/api/checkout" className="mt-4">
+            <Button type="submit">Checkout (mock)</Button>
           </form>
         </>
       )}

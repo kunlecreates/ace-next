@@ -33,7 +33,8 @@ Below is the current set of requirements we’ll iterate against.
 
 ## Notes
 - The chosen stack is Node/Next.js + TypeScript with GitHub Actions for CI/CD.
-- CD uses Kubernetes with Helm. Self-hosted runner performs helm upgrade --install with environment-specific values.
+- Frontend: Tailwind CSS v4 with shadcn-style primitives; dark/light theme via next-themes; lucide icons; sonner toasts.
+- CD uses Kubernetes with Helm. Self-hosted runner (ARC runner scale set) performs `helm upgrade --install` with environment-specific values.
 - Ingress: NGINX (className: nginx), exposed via Cloudflared tunnel to the ingress controller. Hostname: ace-next.kunlecreates.org.
 - Storage: SQLite on a PVC (single-replica only). When scaling horizontally, migrate to Postgres/MySQL and disable the PVC. Deployment uses Recreate strategy when PVC is enabled.
 - Secret management: Secrets are applied by the CD workflow (not created by the chart) and referenced by the release (`<release>-secrets` by default).

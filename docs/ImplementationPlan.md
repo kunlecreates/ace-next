@@ -26,8 +26,18 @@ This plan maps PRD requirements to concrete deliverables in this repository (Nex
 - Phase 3: Observability, Security hardening, CI/CD — IN PROGRESS
   - FR013 Logging/metrics (basic) — DONE; per-route labeling + Prom endpoint — DONE; Tracing — TODO
   - FR014 Security hardening (rate-limit, headers, CSRF posture) — DONE (CSRF posture documented/TODO if non-JSON forms introduced)
-  - FR015 CI enhancements — DONE (Playwright in CI, npm audit, OSV scan, Dockerfile + GHCR publish); Deploy — IN PROGRESS (Helm chart + CD workflow added; `helm lint` runs in pipeline)
+  - FR015 CI enhancements — DONE (Playwright in CI, npm audit, OSV scan, Dockerfile + GHCR publish); Deploy — DONE (Helm chart + ARC-only CD workflow with `helm lint` and automated secrets/imagePullSecret)
   - FR016 NFRs (perf, reliability, maintainability) — ONGOING
+
+## Frontend modernization (Design System) — DONE
+- Tailwind CSS v4 configured with `@tailwindcss/postcss` plugin and base tokens in `app/globals.css` (dark mode via `class`).
+- shadcn-style UI primitives in `components/ui` (Button, Input, Label, Card, Badge, Separator) with `cn` helper (`lib/utils.ts`).
+- Theme support via `next-themes` with `ThemeProvider` and `ThemeToggle` in layout; dark/light tokens defined.
+- Icons via `lucide-react` and toast notifications via `sonner` (mounted `AppToaster`).
+- Navigation polish: added `ActiveLink` for active-route styling in the header (bold + underline).
+- Product grid polish: card-based layout with price badge, SKU/stock meta, and Quick Add to cart button.
+- Cart flows: improved buttons/inputs, success/error toasts, and header cart badge auto-updates via `cart:updated` event.
+- Admin pages: modernized tables for products and orders with consistent styling.
 
 ## Data Model (Prisma/SQLite for dev)
 - User: id, email (unique), name, passwordHash, role (enum: CUSTOMER | ADMIN), createdAt
@@ -85,12 +95,14 @@ This plan maps PRD requirements to concrete deliverables in this repository (Nex
 - npm audit and OSV scan (non-blocking) — DONE
 - Dockerfile + build/push to GHCR — DONE
 - GitHub Deployment record (for releases) — DONE
-- Kubernetes deployment via Helm using Project Runners — PARTIAL
+- Kubernetes deployment via Helm using ARC runner scale sets — DONE
   - Helm chart under `charts/acegrocer` (Deployment/Service/Ingress/PVC/ServiceAccount; HPA optional and disabled for SQLite)
   - Secret handling: Chart defaults to external Secret (no Secret created). CD applies a Secret named `<release>-secrets`; chart references it via `secret.name`.
   - SQLite safety: Deployment uses Recreate strategy when `persistence.enabled=true` (RWO PVC) to avoid upgrade conflicts; single replica only.
   - Environments: `k8s/staging.values.yaml`, `k8s/prod.values.yaml` (present)
-  - Pipeline: build & push image (GHCR), then `helm lint` and `helm upgrade --install` on a self-hosted runner, with image repo/tag and `secret.name` overrides.
+  - Pipeline: build & push image (GHCR), then `helm lint` and `helm upgrade --install` on an in-cluster ARC runner. Image repo/tag and `secret.name` are set; `imagePullSecrets` is passed (`ghcr-pull-secret`) and can be auto-created from repo secrets.
+  - Auth: ARC-only in-cluster; kubeconfig is derived from the runner Pod’s service account (no external kubeconfig fallback). Runner targeting uses the runner scale set Helm release name as a single `runs-on` label (e.g., `runs-on: acegrocer-runnerset`).
+  - Defaults: Image repository defaults to `ghcr.io/kunlecreates/ace-next` in values; namespace defaults to `acegrocer-system` in CD inputs; workflow has a prod toggle (`use_prod`, `prod_namespace`).
   - Ingress: NGINX className=nginx, hostname ace-next.kunlecreates.org (Cloudflared tunnel in front)
   - Observability: rely on namespace OpenTelemetry instrumentation; no ServiceMonitor required
   - Database migrations: when switching to Postgres/MySQL, add a Helm hook Job to run `npx prisma migrate deploy`
@@ -107,6 +119,12 @@ This plan maps PRD requirements to concrete deliverables in this repository (Nex
 - Checkout validates stock, creates order, clears cart, redirects back with success banner — DONE
 - Customer can view order history and details — DONE
 - Admin can view/manage orders — DONE
+
+## Acceptance criteria (Phase 3 UI polish)
+- Dark/light theme toggle in header — DONE
+- Active nav highlighting in header — DONE
+- Product grid has Quick Add to cart — DONE
+- Toast feedback for cart actions — DONE
 
 ## Tests status
 - E2E: full customer checkout then admin updates order to SHIPPED (Playwright) — PASS
@@ -127,27 +145,37 @@ This plan maps PRD requirements to concrete deliverables in this repository (Nex
 - Admin orders API hardened with proper 403/404 and Zod validation; server action updates status in UI.
 - Metrics enriched with per-route labels; Prometheus exposition at /api/metrics/prom.
 - Deterministic tests: seeded data (Bananas) and API-based auth to stabilize E2E.
+ - UI modernization: Tailwind v4 + shadcn-style primitives, theme toggle, lucide icons, sonner toasts, header ActiveLink, QuickAdd on product grid.
 
 ## Next phase: actionable TODOs
-1) Dev API docs
+1) ARC/CD readiness & first deploy
+  - Install ARC controller and a runner scale set via Helm per `docs/arc-setup.md` (GitHub App auth, secret in runners namespace). Use `INSTALLATION_NAME=acegrocer-runnerset`.
+  - Create cross-namespace RBAC; ensure a runner is Ready in `acegrocer-runners` and can reach the cluster API.
+  - Configure repo secrets: `JWT_SECRET` (required), optional `GHCR_READ_USERNAME`/`GHCR_READ_TOKEN` for private image pulls.
+  - Run CI to build/push, then trigger CD with staging defaults. Confirm rollout/ingress health.
+2) Production rollout path
+  - Use the new `use_prod` and `prod_namespace` inputs in CD to deploy with `k8s/prod.values.yaml`. Optionally add a protected GitHub Environment for prod with approvals and set environment_url.
+3) Dev API docs
   - Swagger UI at /api/docs/ui — DONE
   - Expand OpenAPI coverage to 100% (ensure all response/error shapes documented; include examples). Consider generating a Postman collection from OpenAPI.
-2) DB indexes & data hygiene
+4) DB indexes & data hygiene
   - SQLite: using a standard UNIQUE index on User.emailLower — DONE (seed backfills).
   - If migrating to Postgres later, consider partial unique indexes appropriately; document migration path.
-3) CI/CD & security posture
-  - Kubernetes + Helm deploy: finalize GHCR image repository path (set in values or via `--set image.repository=...`). Ensure GitHub secrets exist: `KUBECONFIG_DATA_BASE64`, `JWT_SECRET`.
-  - Add optional prod deployment path (job or workflow input) to use `k8s/prod.values.yaml` and prod namespace.
-  - Migrations: add Helm hook Job to run `npx prisma migrate deploy` on each release; optional separate seeded admin Job gated by env.
-  - Enable Dependabot/Renovate for dependency hygiene; keep npm audit/OSV as non-blocking info gates.
-  - Revisit cookie SameSite=Strict in prod (verify flows); document CSRF posture (only JSON APIs now; add double-submit if forms introduced).
-4) Observability
+5) CI/CD & security posture
+  - CD: finalized (ARC-only, in-cluster). Keep repo secrets current; consider adding a GitHub Environment for prod with protection rules. Optionally set environment_url in CD on success.
+  - Migrations: add Helm hook Job to run `npx prisma migrate deploy` when moving to Postgres/MySQL; optional seeded admin Job gated by env.
+  - Enable Dependabot/Renovate; keep npm audit/OSV as non-blocking info gates.
+  - Revisit cookie SameSite=Strict in prod (verify flows); document CSRF posture (JSON APIs only now; add double-submit if forms introduced).
+6) Observability
   - Add histogram buckets (p50/p90/p99) to metrics; expose in /api/metrics and /api/metrics/prom; add a minimal Grafana dashboard JSON.
   - Add OpenTelemetry tracing: inbound request spans + Prisma/DB spans; optional exporter to OTLP/console.
-5) Tests
+7) Tests
   - Contract tests: validate API responses against the OpenAPI schema.
   - Add pagination/filters coverage where missing; keep API-based login in E2E for stability; shard E2E in CI and archive traces on failure.
-6) UX/Polish
-  - Toasts/disabled states on cart updates; better admin tables; empty/zero states; basic a11y sweep.
-7) Performance/readiness
+8) UX/Polish
+  - Product images (optional) and skeleton loaders for grid/detail.
+  - Admin tables: zebra striping, sticky header, mobile responsive stacking.
+  - Broaden toast usage for admin actions; add loading spinners on long-running actions.
+  - Basic a11y sweep (landmarks, focus ring consistency, aria-live for toasts where helpful).
+9) Performance/readiness
   - Add a small load test harness (k6/Artillery) and an optional CI smoke load.

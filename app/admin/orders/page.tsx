@@ -98,13 +98,13 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
   }
 
   return (
-    <main>
-      <h1>Admin: Orders</h1>
-      <section style={{ margin: '12px 0', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <form method="get" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+    <main className="container mx-auto p-6">
+      <h1 className="text-2xl font-semibold">Admin: Orders</h1>
+      <section className="mt-3 flex flex-wrap items-center gap-2">
+        <form method="get" className="flex flex-wrap items-center gap-2">
           <label>
             Status
-            <select name="status" defaultValue={activeStatus} style={{ marginLeft: 6 }}>
+            <select name="status" defaultValue={activeStatus} className="ml-1 rounded-md border px-2 py-1 text-sm">
               <option value="">All</option>
               {['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELED'].map((s) => (
                 <option key={s} value={s}>{s}</option>
@@ -113,19 +113,19 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
           </label>
           <label>
             Email
-            <input type="text" name="email" defaultValue={activeEmail} placeholder="user@example.com" style={{ marginLeft: 6 }} />
+            <input type="text" name="email" defaultValue={activeEmail} placeholder="user@example.com" className="ml-1 w-56 rounded-md border px-2 py-1 text-sm" />
           </label>
           <label>
             From
-            <input type="datetime-local" name="from" defaultValue={from} style={{ marginLeft: 6 }} />
+            <input type="datetime-local" name="from" defaultValue={from} className="ml-1 rounded-md border px-2 py-1 text-sm" />
           </label>
           <label>
             To
-            <input type="datetime-local" name="to" defaultValue={to} style={{ marginLeft: 6 }} />
+            <input type="datetime-local" name="to" defaultValue={to} className="ml-1 rounded-md border px-2 py-1 text-sm" />
           </label>
           <label>
             Sort
-            <select name="sort" defaultValue={sort} style={{ marginLeft: 6 }}>
+            <select name="sort" defaultValue={sort} className="ml-1 rounded-md border px-2 py-1 text-sm">
               <option value="">createdAt</option>
               <option value="totalCents">totalCents</option>
               <option value="status">status</option>
@@ -134,48 +134,48 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
           </label>
           <label>
             Order
-            <select name="order" defaultValue={order || 'desc'} style={{ marginLeft: 6 }}>
+            <select name="order" defaultValue={order || 'desc'} className="ml-1 rounded-md border px-2 py-1 text-sm">
               <option value="asc">asc</option>
               <option value="desc">desc</option>
             </select>
           </label>
           <label>
             Page
-            <input type="number" name="page" defaultValue={page} min={1} style={{ width: 72, marginLeft: 6 }} />
+            <input type="number" name="page" defaultValue={page} min={1} className="ml-1 w-20 rounded-md border px-2 py-1 text-sm" />
           </label>
           <label>
             Page Size
-            <input type="number" name="pageSize" defaultValue={pageSize} min={1} max={100} style={{ width: 72, marginLeft: 6 }} />
+            <input type="number" name="pageSize" defaultValue={pageSize} min={1} max={100} className="ml-1 w-24 rounded-md border px-2 py-1 text-sm" />
           </label>
-          <button type="submit">Apply</button>
-          <a href="/admin/orders" style={{ marginLeft: 8 }}>Reset</a>
+          <button type="submit" className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground">Apply</button>
+          <a href="/admin/orders" className="ml-2 text-sm text-primary hover:underline">Reset</a>
         </form>
         {activeEmail ? (
-          <span style={{ marginLeft: 8, fontSize: 12, color: '#555' }}>Filter email: {activeEmail}</span>
+          <span className="ml-2 text-xs text-muted-foreground">Filter email: {activeEmail}</span>
         ) : null}
       </section>
 
       {orders.length === 0 ? (
         <p>No orders.</p>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table className="mt-3 w-full border-collapse text-sm">
           <thead>
-            <tr>
-              <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #ddd' }}>ID</th>
-              <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #ddd' }}>User</th>
-              <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #ddd' }}>Status</th>
-              <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #ddd' }}>Total</th>
-              <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #ddd' }}>Actions</th>
+            <tr className="border-b">
+              <th className="px-2 py-2 text-left">ID</th>
+              <th className="px-2 py-2 text-left">User</th>
+              <th className="px-2 py-2 text-left">Status</th>
+              <th className="px-2 py-2 text-left">Total</th>
+              <th className="px-2 py-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
             {orders.map((o) => (
-              <tr key={o.id} data-testid="order-row" data-order-id={o.id} data-user-email={o.user.email}>
-                <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>{o.id}</td>
-                <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>{o.user.email}</td>
-                <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>{badge(o.status)}</td>
-                <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>${(o.totalCents / 100).toFixed(2)}</td>
-                <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>
+              <tr key={o.id} data-testid="order-row" data-order-id={o.id} data-user-email={o.user.email} className="border-b">
+                <td className="px-2 py-2">{o.id}</td>
+                <td className="px-2 py-2">{o.user.email}</td>
+                <td className="px-2 py-2">{badge(o.status)}</td>
+                <td className="px-2 py-2">${(o.totalCents / 100).toFixed(2)}</td>
+                <td className="px-2 py-2">
                   <form action={async (formData: FormData) => {
                     'use server'
                     const status = formData.get('orderStatus') as string
@@ -217,12 +217,12 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
                     <input type="hidden" name="filterOrder" value={order || 'desc'} />
                     <input type="hidden" name="filterPage" value={page} />
                     <input type="hidden" name="filterPageSize" value={pageSize} />
-                    <select name="orderStatus" data-testid="order-row-status" data-order-id={o.id} defaultValue={o.status}>
+                    <select name="orderStatus" data-testid="order-row-status" data-order-id={o.id} defaultValue={o.status} className="mr-2 rounded-md border px-2 py-1 text-sm">
                       {['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELED'].map((s) => (
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
-                    <button type="submit" data-testid="order-row-update" data-order-id={o.id}>Update</button>
+                    <button type="submit" data-testid="order-row-update" data-order-id={o.id} className="rounded-md bg-secondary px-3 py-1.5 text-xs text-secondary-foreground">Update</button>
                   </form>
                 </td>
               </tr>
@@ -230,14 +230,14 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
           </tbody>
         </table>
       )}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12 }}>
+      <div className="mt-3 flex items-center gap-2">
         <span>Page {currentPage} of {totalPages} ({total} total)</span>
-        <div style={{ marginLeft: 'auto' }}>
+        <div className="ml-auto">
           {currentPage > 1 ? (
-            <a href={`/admin/orders?${new URLSearchParams({ ...Object.fromEntries(qs), page: String(currentPage - 1) }).toString()}`}>Prev</a>
+            <a className="text-primary hover:underline" href={`/admin/orders?${new URLSearchParams({ ...Object.fromEntries(qs), page: String(currentPage - 1) }).toString()}`}>Prev</a>
           ) : null}
           {currentPage < totalPages ? (
-            <a style={{ marginLeft: 8 }} href={`/admin/orders?${new URLSearchParams({ ...Object.fromEntries(qs), page: String(currentPage + 1) }).toString()}`}>Next</a>
+            <a className="ml-3 text-primary hover:underline" href={`/admin/orders?${new URLSearchParams({ ...Object.fromEntries(qs), page: String(currentPage + 1) }).toString()}`}>Next</a>
           ) : null}
         </div>
       </div>

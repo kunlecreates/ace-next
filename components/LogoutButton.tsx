@@ -21,7 +21,11 @@ export default function LogoutButton() {
   }
 
   return (
-    <button onClick={onClick} disabled={loading}>
+    <button
+      onClick={onClick}
+      disabled={loading}
+      className="inline-flex items-center rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/15 disabled:opacity-50"
+    >
       {loading ? 'Signing out…' : 'Logout'}
     </button>
   )

@@ -1,5 +1,5 @@
 image:
-  repository: ghcr.io/OWNER/REPO/acegrocer # TODO: set to your GHCR image path
+  repository: ghcr.io/kunlecreates/ace-next
   tag: latest # or use a specific tag/sha in CD
 
 replicaCount: 1
