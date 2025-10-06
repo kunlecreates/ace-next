@@ -14,20 +14,18 @@ test('customer checkout and admin status update end-to-end', async ({ page, base
 
   // Register customer
   await page.goto('/register')
-  await page.getByLabel(/email/i).fill(customerEmail)
-  await page.getByLabel(/name/i).fill('Customer Test')
-  await page.getByLabel(/^password$/i).fill(PASSWORD)
+  await page.locator('input#email').fill(customerEmail)
+  await page.locator('input#name').fill('Customer Test')
+  await page.locator('input#password').fill(PASSWORD)
   const createBtn = page.getByRole('button', { name: /create account|sign up|register|submit/i })
   await createBtn.click()
 
   // Login customer
   await page.goto('/login')
-  await page.getByLabel(/email/i).fill(customerEmail)
-  await page.getByLabel(/^password$/i).fill(PASSWORD)
+  await page.locator('input#email').fill(customerEmail)
+  await page.locator('input#password').fill(PASSWORD)
   await page.getByRole('button', { name: /sign in|login/i }).click()
-  // Ensure the login navigation completes
-  await expect(page.getByRole('link', { name: 'Acegrocer' })).toBeVisible()
-  // Wait for navigation and app hydration after login
+  // Ensure the login navigation completes and app hydration after login
   await expect(page.getByRole('link', { name: 'Acegrocer' })).toBeVisible()
   await expect(page).toHaveURL(new RegExp(`${baseURL?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') || ''}/?`))
 
@@ -69,9 +67,9 @@ test('customer checkout and admin status update end-to-end', async ({ page, base
 
   // Register admin
   await page.goto('/register')
-  await page.getByLabel(/email/i).fill(adminEmail)
-  await page.getByLabel(/name/i).fill('Admin Test')
-  await page.getByLabel(/^password$/i).fill(PASSWORD)
+  await page.locator('input#email').fill(adminEmail)
+  await page.locator('input#name').fill('Admin Test')
+  await page.locator('input#password').fill(PASSWORD)
   await page.getByRole('button', { name: /create account|sign up|register|submit/i }).click()
 
   // Promote admin via script
@@ -79,8 +77,8 @@ test('customer checkout and admin status update end-to-end', async ({ page, base
 
   // Login admin
   await page.goto('/login')
-  await page.getByLabel(/email/i).fill(adminEmail)
-  await page.getByLabel(/^password$/i).fill(PASSWORD)
+  await page.locator('input#email').fill(adminEmail)
+  await page.locator('input#password').fill(PASSWORD)
   await page.getByRole('button', { name: /sign in|login/i }).click()
   // Wait until server recognizes admin role
   await expect(page.getByRole('link', { name: 'Acegrocer' })).toBeVisible()

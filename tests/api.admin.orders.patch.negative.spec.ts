@@ -10,19 +10,19 @@ const PASSWORD = 'ChangeMe123!'
 async function registerAndPromoteAdmin(page: any, email: string) {
   // Register
   await page.goto('/register')
-  await page.getByLabel(/email/i).fill(email)
-  await page.getByLabel(/name/i).fill('Admin Neg Test')
-  await page.getByLabel(/^password$/i).fill(PASSWORD)
+  await page.locator('input#email').fill(email)
+  await page.locator('input#name').fill('Admin Neg Test')
+  await page.locator('input#password').fill(PASSWORD)
   await page.getByRole('button', { name: /create account|sign up|register|submit/i }).click()
   // Promote
   const { execFileSync } = await import('child_process')
   execFileSync('node', ['scripts/make-admin.mjs', email], { stdio: 'inherit' })
   // Login
   await page.goto('/login')
-  await page.getByLabel(/email/i).fill(email)
-  await page.getByLabel(/^password$/i).fill(PASSWORD)
+  await page.locator('input#email').fill(email)
+  await page.locator('input#password').fill(PASSWORD)
   await page.getByRole('button', { name: /sign in|login/i }).click()
-  await expect(page.getByRole('heading', { name: 'Acegrocer' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Acegrocer' })).toBeVisible()
   await page.waitForFunction(async () => {
     try {
       const res = await fetch('/api/me', { cache: 'no-store', credentials: 'include' })

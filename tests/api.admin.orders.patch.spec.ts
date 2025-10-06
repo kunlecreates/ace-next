@@ -14,10 +14,10 @@ const PASSWORD = 'ChangeMe123!'
 
 async function login(page: any, email: string, password: string) {
   await page.goto('/login')
-  await page.getByLabel(/email/i).fill(email)
-  await page.getByLabel(/^password$/i).fill(password)
+  await page.locator('input#email').fill(email)
+  await page.locator('input#password').fill(password)
   await page.getByRole('button', { name: /sign in|login/i }).click()
-  await expect(page.getByRole('heading', { name: 'Acegrocer' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Acegrocer' })).toBeVisible()
 }
 
 test('PATCH /api/admin/orders updates status with admin auth', async ({ page }) => {
@@ -26,9 +26,9 @@ test('PATCH /api/admin/orders updates status with admin auth', async ({ page }) 
 
   // Register customer and place an order
   await page.goto('/register')
-  await page.getByLabel(/email/i).fill(customerEmail)
-  await page.getByLabel(/name/i).fill('Customer API Test')
-  await page.getByLabel(/^password$/i).fill(PASSWORD)
+  await page.locator('input#email').fill(customerEmail)
+  await page.locator('input#name').fill('Customer API Test')
+  await page.locator('input#password').fill(PASSWORD)
   await page.getByRole('button', { name: /create account|sign up|register|submit/i }).click()
 
   await login(page, customerEmail, PASSWORD)
@@ -47,9 +47,9 @@ test('PATCH /api/admin/orders updates status with admin auth', async ({ page }) 
 
   // Register and promote admin
   await page.goto('/register')
-  await page.getByLabel(/email/i).fill(adminEmail)
-  await page.getByLabel(/name/i).fill('Admin API Test')
-  await page.getByLabel(/^password$/i).fill(PASSWORD)
+  await page.locator('input#email').fill(adminEmail)
+  await page.locator('input#name').fill('Admin API Test')
+  await page.locator('input#password').fill(PASSWORD)
   await page.getByRole('button', { name: /create account|sign up|register|submit/i }).click()
 
   // Promote via script (synchronously)

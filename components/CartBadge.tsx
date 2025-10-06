@@ -32,6 +32,17 @@ function useCartCount() {
 
 export default function CartBadge() {
   const count = useCartCount()
-  if (!Number(count)) return null
-  return <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/20 px-1.5 text-[11px] leading-4 text-primary">{count}</span>
+  if (!Number(count)) return (
+    <a href="/cart" className="inline-flex items-center text-sm hover:underline">
+      Cart
+    </a>
+  )
+  return (
+    <a href="/cart" className="relative inline-flex items-center text-sm hover:underline">
+      Cart
+      <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white/20 px-1.5 text-[11px] leading-4 text-white">
+        {count}
+      </span>
+    </a>
+  )
 }

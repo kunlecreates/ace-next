@@ -10,15 +10,15 @@ function rand(prefix: string) {
 async function registerAndLogin(page: any) {
   const email = `${rand('u')}@example.com`
   await page.goto('/register')
-  await page.getByLabel(/email/i).fill(email)
-  await page.getByLabel(/name/i).fill('Cart Tester')
-  await page.getByLabel(/^password$/i).fill(PASSWORD)
+  await page.locator('input#email').fill(email)
+  await page.locator('input#name').fill('Cart Tester')
+  await page.locator('input#password').fill(PASSWORD)
   await page.getByRole('button', { name: /create account|sign up|register|submit/i }).click()
   await page.goto('/login')
-  await page.getByLabel(/email/i).fill(email)
-  await page.getByLabel(/^password$/i).fill(PASSWORD)
+  await page.locator('input#email').fill(email)
+  await page.locator('input#password').fill(PASSWORD)
   await page.getByRole('button', { name: /sign in|login/i }).click()
-  await expect(page.getByRole('heading', { name: 'Acegrocer' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Acegrocer' })).toBeVisible()
   return email
 }
 
