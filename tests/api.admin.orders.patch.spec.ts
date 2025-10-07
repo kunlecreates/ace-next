@@ -13,7 +13,8 @@ function randomEmail(prefix: string) {
 const PASSWORD = 'ChangeMe123!'
 
 async function login(page: any, email: string, password: string) {
-  await page.goto('/login')
+  await page.goto('/')
+  await page.getByRole('link', { name: /sign in|login/i }).click()
   await page.locator('input#email').fill(email)
   await page.locator('input#password').fill(password)
   await page.getByRole('button', { name: /sign in|login/i }).click()

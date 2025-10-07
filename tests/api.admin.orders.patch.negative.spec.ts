@@ -17,7 +17,8 @@ async function registerAndPromoteAdmin(page: any, email: string) {
   const { execFileSync } = await import('child_process')
   execFileSync('node', ['scripts/make-admin.mjs', email], { stdio: 'inherit' })
   // Login
-  await page.goto('/login')
+  await page.goto('/')
+  await page.getByRole('link', { name: /sign in|login/i }).click()
   await page.locator('input#email').fill(email)
   await page.locator('input#password').fill(PASSWORD)
   await page.getByRole('button', { name: /sign in|login/i }).click()

@@ -19,7 +19,8 @@ test('customer checkout and admin status update end-to-end', async ({ page, base
   expect(r1.status()).toBe(200)
 
   // Login customer
-  await page.goto('/login')
+  await page.goto('/')
+  await page.getByRole('link', { name: /sign in|login/i }).click()
   await page.locator('input#email').fill(customerEmail)
   await page.locator('input#password').fill(PASSWORD)
   await page.getByRole('button', { name: /sign in|login/i }).click()
@@ -73,7 +74,8 @@ test('customer checkout and admin status update end-to-end', async ({ page, base
   execFileSync('node', ['scripts/make-admin.mjs', adminEmail], { stdio: 'inherit' })
 
   // Login admin
-  await page.goto('/login')
+  await page.goto('/')
+  await page.getByRole('link', { name: /sign in|login/i }).click()
   await page.locator('input#email').fill(adminEmail)
   await page.locator('input#password').fill(PASSWORD)
   await page.getByRole('button', { name: /sign in|login/i }).click()

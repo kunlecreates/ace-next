@@ -15,7 +15,8 @@ async function registerAndLogin(page: any) {
   })
   expect(r.status()).toBe(200)
   // Login via UI to establish browser cookies
-  await page.goto('/login')
+  await page.goto('/')
+  await page.getByRole('link', { name: /sign in|login/i }).click()
   await page.locator('input#email').fill(email)
   await page.locator('input#password').fill(PASSWORD)
   await page.getByRole('button', { name: /sign in|login/i }).click()
