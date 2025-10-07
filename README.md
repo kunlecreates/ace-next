@@ -2,6 +2,11 @@
 
 A minimal Next.js + TypeScript starter using the App Router.
 
+## CI/CD status
+
+- CI: Green. Build, type-check, lint, and Playwright E2E run in GitHub Actions.
+- CD: Ready for ARC in-cluster runners. See docs/arc-setup.md. Helm chart lives under `charts/acegrocer`.
+
 ## Quickstart (Windows PowerShell)
 
 ```powershell
@@ -50,6 +55,15 @@ npm.cmd run test:unit:watch
 # E2E tests (Playwright)
 npm.cmd run test:e2e
 ```
+
+### Playwright auth and stability
+
+- A setup project (`tests/auth.setup.ts`) generates pre-auth storage states under `playwright/.auth/` (admin and user) that tests can opt into with `test.use({ storageState: ... })`.
+- E2E flows avoid brittle UI steps by:
+	- Registering/logging in via API where isolation is needed per test.
+	- Performing cart actions via API and using in-page `fetch()` for checkout, then navigating to the redirect URL to extract `orderId`.
+	- Using the admin API to update order status in the end-to-end test for determinism.
+- If running locally on Windows, prefer `npm.cmd` to avoid policy prompts; limit to 1 worker if you hit intermittent EPERM warnings from Prisma.
 
 ## Notes
 
@@ -129,6 +143,9 @@ docker build -t acegrocer:local .
 
 - CI builds and pushes images to GitHub Container Registry (GHCR) on pushes to main as `ghcr.io/kunlecreates/ace-next:latest` and a `:sha` tag.
 
+Notes:
+- The Dockerfile now creates an empty `public/` directory in the builder stage to support repos without static assets while still copying it in the runner stage.
+
 ## Kubernetes deploy (Helm)
 
 - Chart: `charts/acegrocer`
@@ -172,6 +189,10 @@ See also: `docs/arc-setup.md` for setting up ARC with a GitHub App, RunnerDeploy
 
 - Tests authenticate via API calls (not UI) for speed and stability.
 - E2E selects the seeded product “Bananas” to avoid stock race conditions.
+
+### Prisma config deprecation
+
+- Prisma warns that `package.json#prisma` is deprecated and will be removed in Prisma 7. We’ll migrate to a `prisma.config.ts` in a follow-up (no behavior impact today).
 
 ## UI verification cheatsheet
 

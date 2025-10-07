@@ -204,3 +204,12 @@ The CD workflow requires running on an ARC in-cluster runner. It detects in-clus
   - image_repo/image_tag: optional (defaults to ghcr.io/kunlecreates/ace-next and commit SHA)
 
 The workflow will lint the chart, create/update the app Secret and the registry pull secret (if configured), run `helm upgrade --install`, and smoke test the service.
+
+## Next steps
+
+1. Complete in-cluster runner installation (steps 1–3), confirm a runner Pod becomes Ready in the `acegrocer-runners` namespace.
+2. Apply cross-namespace RBAC (step 4) so the runner can deploy into your target app namespace (default `acegrocer-system`).
+3. Add repo secrets: `JWT_SECRET` (required), and optionally `GHCR_READ_USERNAME`/`GHCR_READ_TOKEN` for private GHCR pulls.
+4. Trigger the "CD - Kubernetes (Helm)" workflow targeting your staging namespace and values file. Verify Helm lint and upgrade succeed.
+5. Validate ingress health by hitting `/api/health` and basic pages. Optionally check `/api/metrics`.
+6. When ready, deploy to prod by setting `use_prod: true` and `prod_namespace`, and considering a protected GitHub Environment for approvals.

@@ -48,6 +48,10 @@ This plan maps PRD requirements to concrete deliverables in this repository (Nex
 - Transaction (mock): id, orderId, amountCents, status (AUTHORIZED | FAILED), provider=MOCK, createdAt
 - CartItem: id, userId, productId, qty (server-side cart tied to user)
 
+### Planned model additions (from PRD v1.0)
+- AuditLog: id, actorUserId, entityType, entityId, action, details JSON, createdAt
+- User: add deletedAt (nullable) and support anonymization (replace PII while preserving referential integrity)
+
 ## API surface (current)
 - Auth
   - POST /api/auth/register – FR001
@@ -75,6 +79,11 @@ This plan maps PRD requirements to concrete deliverables in this repository (Nex
    - GET /api/docs/ui — Swagger UI (dev-only)
    - GET /api/metrics — in-memory request counters and timing stats (per-route)
    - GET /api/metrics/prom — Prometheus exposition format
+
+## Planned API additions (from PRD v1.0)
+- DELETE /api/me — GDPR right-to-forget: anonymize user PII and revoke sessions while retaining order/transaction integrity
+- GET /api/admin/audit-logs (admin) — list/filter audit events for admin actions (order status updates, product CRUD)
+- GET /api/orders/stream (optional) — Server-Sent Events for live order status updates; v1 will use polling
 
 ## Security
 - JWT in httpOnly cookies; SameSite=Lax, Secure (env-controlled); 12h expiry — DONE
@@ -149,6 +158,14 @@ This plan maps PRD requirements to concrete deliverables in this repository (Nex
 - Deterministic tests: seeded data (Bananas) and API-based auth to stabilize E2E.
  - UI modernization: Tailwind v4 + shadcn-style primitives, theme toggle, lucide icons, sonner toasts, header ActiveLink, QuickAdd on product grid, and SafeImage for resilient product images.
 
+## Alignment with PRD v1.0 (Oct 2025) — deltas
+- FR004 pagination: PRD explicitly requires pagination on product catalog; implement API+UI pagination and test coverage.
+- FR010 near-real-time status: Provide status updates without manual refresh (polling for v1; optional SSE later).
+- Success metrics: Instrument auth failure rate, checkout funnel, and add request duration histograms; optionally expose CI/CD pipeline metrics.
+- GDPR: Implement right-to-forget via anonymization and a deletion endpoint; document behavior and scope.
+- Admin auditability: Add an audit log for sensitive admin actions; expose an admin API endpoint for review.
+- Notifications (optional): If included in MVP, add pluggable email/SMS stubs for registration and order updates; feature-flagged.
+
 ## Next phase: actionable TODOs
 1) Observability (high impact)
   - Add histograms (p50/p90/p99) to metrics and wire /api/metrics/prom accordingly.
@@ -183,3 +200,33 @@ This plan maps PRD requirements to concrete deliverables in this repository (Nex
   - Theme toggle: consider compact width (w-28) and "target theme" preview (labels/knob show what comes next); ensure aria-label reflects target state.
 9) Performance/readiness
   - Add a small load test harness (k6/Artillery) and an optional CI smoke load.
+
+10) Products pagination (FR004)
+  - API: Extend GET /api/products with page/pageSize and return total; validate bounds; index as needed.
+  - UI: Add pagination controls and total count; preserve filters/search in query string.
+  - Tests: Add API pagination tests and basic UI pagination checks.
+
+11) Orders near-real-time status (FR010)
+  - Implement client-side polling on orders list/detail (5–10s) to refresh status.
+  - Optional: prototype SSE endpoint `GET /api/orders/stream` for future use.
+
+12) Success metrics instrumentation
+  - Auth: increment auth_login_attempts_total and auth_login_failures_total in login route.
+  - Checkout funnel: counters for add-to-cart, checkout start, order created; label by status.
+  - Histograms: http_request_duration_seconds with sane buckets; wire to /api/metrics/prom.
+  - Optional: basic CI/CD metrics artifact or push to a collector; track lead time and success rate.
+
+13) GDPR right-to-forget
+  - Schema: add User.deletedAt and support anonymization; migration.
+  - API: DELETE /api/me to anonymize user data and revoke sessions; update docs.
+  - Tests: Verify anonymization and access revocation.
+
+14) Admin audit logging
+  - Schema: create AuditLog model; migration.
+  - Write logs on admin order PATCH and product CRUD; include actor, entity, action, details.
+  - API: GET /api/admin/audit-logs with filters; add tests.
+
+15) Notifications (optional; feature-flagged)
+  - Add a simple event bus and pluggable email provider (console transport in dev).
+  - Fire on registration and optionally on order status changes.
+  - Gate via env; add minimal tests.
