@@ -11,6 +11,8 @@ FROM deps AS builder
 COPY . .
 # Ensure node_modules from deps is used
 ENV NODE_ENV=production
+# Ensure a public directory exists even if the repo doesn't include one
+RUN mkdir -p public
 # Generate Prisma client (schema is now available) and build Next.js
 RUN npm run prisma:generate && npm run build
 
