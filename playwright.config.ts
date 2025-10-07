@@ -25,6 +25,9 @@ export default defineConfig({
     timeout: 120_000,
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // Setup project to prepare authenticated storage states (admin and user)
+    { name: 'setup', testMatch: '**/*.setup.ts' },
+    // Main browser project depends on setup for pre-auth when tests opt-in via storageState
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, dependencies: ['setup'] },
   ],
 });

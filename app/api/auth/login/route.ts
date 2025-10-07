@@ -36,11 +36,15 @@ export async function POST(req: Request) {
   const res = NextResponse.json({ id: user.id, email: user.email, role: user.role })
   // Hint to refresh cached routes in app router after auth state change
   res.headers.set('Cache-Control', 'no-store')
+  // Only mark cookie as Secure when using HTTPS. In tests/local HTTP, avoid Secure so the browser sends it.
+  const isHttps = (() => {
+    try { return new URL(req.url).protocol === 'https:' } catch { return false }
+  })()
   res.cookies.set(COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
-    // In production behind HTTPS, enforce secure cookies unless explicitly disabled
-    secure: process.env.NODE_ENV === 'production' ? true : process.env.COOKIE_SECURE === 'true',
+    // Use Secure cookies only on HTTPS. Allow override via COOKIE_SECURE if explicitly set to 'true'.
+    secure: process.env.COOKIE_SECURE === 'true' ? true : isHttps,
     path: '/',
     maxAge: 60 * 60 * 12,
   })

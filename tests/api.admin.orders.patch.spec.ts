@@ -1,9 +1,8 @@
 import { test, expect } from '@playwright/test'
 
 // Quick integration test for the admin PATCH /api/admin/orders route
-// - Creates a customer and places an order via UI
-// - Promotes a new admin and logs in
-// - Calls the PATCH endpoint directly and verifies the change
+// - Places an order as a unique per-test user to avoid cross-test interference
+// - Uses pre-auth admin storageState to update order status via API
 
 function randomEmail(prefix: string) {
   const n = Math.random().toString(36).slice(2, 8)
@@ -12,69 +11,55 @@ function randomEmail(prefix: string) {
 
 const PASSWORD = 'ChangeMe123!'
 
-async function login(page: any, email: string, password: string) {
-  await page.goto('/')
-  await page.getByRole('link', { name: /sign in|login/i }).click()
-  await page.locator('input#email').fill(email)
-  await page.locator('input#password').fill(password)
-  await page.getByRole('button', { name: /sign in|login/i }).click()
-  await expect(page.getByRole('link', { name: 'Acegrocer' })).toBeVisible()
-}
+test('PATCH /api/admin/orders updates status with admin auth', async ({ browser }) => {
+  const customerContext = await browser.newContext()
+  const customerPage = await customerContext.newPage()
+  const email = randomEmail('cust')
 
-async function registerViaApi(page: any, email: string, name: string) {
-  const r = await page.request.post('/api/auth/register', {
-    data: { email, name, password: PASSWORD },
+  // Register and login customer within this isolated context
+  const r1 = await customerPage.request.post('/api/auth/register', {
+    data: { email, name: 'Customer API Test', password: PASSWORD },
   })
-  if (r.status() !== 200) throw new Error('Failed to register via API')
-}
+  expect(r1.status()).toBe(200)
+  const rLogin = await customerPage.request.post('/api/auth/login', {
+    data: { email, password: PASSWORD },
+  })
+  expect(rLogin.status()).toBe(200)
 
-test('PATCH /api/admin/orders updates status with admin auth', async ({ page }) => {
-  const customerEmail = randomEmail('cust')
-  const adminEmail = randomEmail('admin')
+  // Pick a product via API (prefer Bananas) and add to cart via API to avoid UI flake
+  const productsResp = await customerPage.request.get('/api/products')
+  expect(productsResp.status()).toBe(200)
+  const productsJson = await productsResp.json()
+  const products = productsJson?.products as Array<{ id: number; name: string }>
+  expect(products?.length).toBeGreaterThan(0)
+  const chosen = products.find((p) => p.name === 'Bananas') || products[0]
+  const addResp = await customerPage.request.post('/api/cart', { data: { productId: chosen.id, qty: 1 } })
+  expect(addResp.status()).toBe(200)
 
-  // Register customer via API and place an order
-  await registerViaApi(page, customerEmail, 'Customer API Test')
-
-  await login(page, customerEmail, PASSWORD)
-  await page.goto('/products')
-  await page.locator('main ul li a').first().click()
-  await page.getByRole('button', { name: /add to cart/i }).click()
-  await expect(page).toHaveURL(/\/cart/)
-  await page.getByRole('button', { name: /checkout/i }).click()
-  await expect(page).toHaveURL(/\/cart\?success=1/)
-  const orderId = new URL(page.url()).searchParams.get('orderId')
+  // Ensure page has an origin before in-page fetch
+  await customerPage.goto('/cart')
+  await expect(customerPage).toHaveURL(/\/cart/)
+  // Checkout via in-page fetch, capturing the final redirected URL (fetch follows redirects and exposes r.url)
+  const finalUrl = await customerPage.evaluate(async () => {
+    const r = await fetch('/api/checkout', { method: 'POST' })
+    return r.url
+  })
+  expect(finalUrl).toMatch(/\/cart\?success=1/)
+  await customerPage.goto(finalUrl)
+  await expect(customerPage).toHaveURL(/\/cart\?success=1/)
+  const orderId = new URL(finalUrl).searchParams.get('orderId')
   expect(orderId).not.toBeNull()
 
-  // Logout customer
-  const logoutButton = page.getByRole('button', { name: /logout/i })
-  if (await logoutButton.count()) await logoutButton.click()
-
-  // Register and promote admin
-  await registerViaApi(page, adminEmail, 'Admin API Test')
-
-  // Promote via script (synchronously)
-  const { execFileSync } = await import('child_process')
-  execFileSync('node', ['scripts/make-admin.mjs', adminEmail], { stdio: 'inherit' })
-
-  // Admin login
-  await login(page, adminEmail, PASSWORD)
-
-  // Ensure server recognizes admin role
-  await page.waitForFunction(async () => {
-    try {
-      const res = await fetch('/api/me', { cache: 'no-store', credentials: 'include' })
-      const data = await res.json()
-      return data?.user?.role === 'ADMIN'
-    } catch {
-      return false
-    }
-  }, { timeout: 5000 })
-
-  // Use the page's request (shares cookies) to call admin API
-  const resp = await page.request.patch('/api/admin/orders', {
+  // Use a separate admin context pre-authenticated via storageState to call admin API
+  const adminContext = await browser.newContext({ storageState: 'playwright/.auth/admin.json' })
+  const adminPage = await adminContext.newPage()
+  const resp = await adminPage.request.patch('/api/admin/orders', {
     data: { id: Number(orderId), status: 'SHIPPED' },
   })
   expect(resp.status()).toBe(200)
   const json = await resp.json()
   expect(json?.order?.status).toBe('SHIPPED')
+
+  await adminContext.close()
+  await customerContext.close()
 })

@@ -34,18 +34,12 @@ export async function POST(req: Request) {
     return badRequest('Invalid payload', parsed.error.flatten())
   }
   const { productId, qty } = parsed.data
-  // Increment existing quantity if item exists, otherwise create
-  const existing = await prisma.cartItem.findUnique({
+  // Atomic upsert to avoid race conditions under parallel requests
+  const item = await prisma.cartItem.upsert({
     where: { userId_productId: { userId: user.id, productId } },
+    update: { qty: { increment: qty } },
+    create: { userId: user.id, productId, qty },
   })
-  const item = existing
-    ? await prisma.cartItem.update({
-        where: { userId_productId: { userId: user.id, productId } },
-        data: { qty: { increment: qty } },
-      })
-    : await prisma.cartItem.create({
-        data: { userId: user.id, productId, qty },
-      })
   const res = NextResponse.json({ item })
   res.headers.set('Cache-Control', 'no-store')
   return res

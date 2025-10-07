@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test'
+// Start tests already authenticated by using the user storage state from setup
+test.use({ storageState: 'playwright/.auth/user.json' })
 
 const PASSWORD = 'ChangeMe123!'
 
@@ -7,25 +9,17 @@ function rand(prefix: string) {
   return `${prefix}-${n}`
 }
 
-async function registerAndLogin(page: any) {
+async function register(page: any) {
   const email = `${rand('u')}@example.com`
-  // Register via API
   const r = await page.request.post('/api/auth/register', {
     data: { email, name: 'Cart Tester', password: PASSWORD },
   })
   expect(r.status()).toBe(200)
-  // Login via UI to establish browser cookies
-  await page.goto('/')
-  await page.getByRole('link', { name: /sign in|login/i }).click()
-  await page.locator('input#email').fill(email)
-  await page.locator('input#password').fill(PASSWORD)
-  await page.getByRole('button', { name: /sign in|login/i }).click()
-  await expect(page.getByRole('link', { name: 'Acegrocer' })).toBeVisible()
   return email
 }
 
-async function getFirstProductId(request: any) {
-  const resp = await request.get('/api/products')
+async function getFirstProductId(page: any) {
+  const resp = await page.request.get('/api/products')
   expect(resp.status()).toBe(200)
   const json = await resp.json()
   const id = json?.products?.[0]?.id
@@ -35,8 +29,8 @@ async function getFirstProductId(request: any) {
 
 // Happy path add within bounds
 test('POST /api/cart respects qty max 100 and returns 400 when exceeded', async ({ page }) => {
-  await registerAndLogin(page)
-  const productId = await getFirstProductId(page.request)
+  await register(page)
+  const productId = await getFirstProductId(page)
 
   const ok = await page.request.post('/api/cart', { data: { productId, qty: 100 } })
   expect(ok.status()).toBe(200)
@@ -49,8 +43,8 @@ test('POST /api/cart respects qty max 100 and returns 400 when exceeded', async 
 
 // PATCH within bounds, and above bounds
 test('PATCH /api/cart caps qty to 100 via validation', async ({ page }) => {
-  await registerAndLogin(page)
-  const productId = await getFirstProductId(page.request)
+  await register(page)
+  const productId = await getFirstProductId(page)
 
   const initial = await page.request.patch('/api/cart', { data: { productId, qty: 1 } })
   expect(initial.status()).toBe(200)

@@ -106,6 +106,7 @@ export default function CartList({ initialItems }: { initialItems: Item[] }) {
               className="h-8 w-8"
               variant="outline"
               size="icon"
+              data-testid="cart-plus"
             >
               +
             </Button>
@@ -117,6 +118,7 @@ export default function CartList({ initialItems }: { initialItems: Item[] }) {
               className="h-8 w-8"
               variant="outline"
               size="icon"
+              data-testid="cart-minus"
             >
               -
             </Button>
@@ -129,6 +131,7 @@ export default function CartList({ initialItems }: { initialItems: Item[] }) {
               }
               variant="secondary"
               className="px-3"
+              data-testid="cart-update"
             >
               Update
             </Button>
@@ -137,6 +140,7 @@ export default function CartList({ initialItems }: { initialItems: Item[] }) {
               disabled={updatingId === it.productId}
               variant="destructive"
               className="px-3"
+              data-testid="cart-remove"
             >
               Remove
             </Button>
