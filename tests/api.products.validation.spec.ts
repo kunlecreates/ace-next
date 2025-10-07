@@ -9,12 +9,11 @@ function rand(prefix: string) {
 
 async function registerAndPromoteAdmin(page: any) {
   const email = `${rand('admin')}@example.com`
-  // Register
-  await page.goto('/register')
-  await page.locator('input#email').fill(email)
-  await page.locator('input#name').fill('Admin Tester')
-  await page.locator('input#password').fill(PASSWORD)
-  await page.getByRole('button', { name: /create account|sign up|register|submit/i }).click()
+  // Register via API to avoid UI flake
+  const r = await page.request.post('/api/auth/register', {
+    data: { email, name: 'Admin Tester', password: PASSWORD },
+  })
+  expect(r.status()).toBe(200)
   // Promote via script
   const { execFileSync } = await import('child_process')
   execFileSync('node', ['scripts/make-admin.mjs', email], { stdio: 'inherit' })

@@ -20,16 +20,19 @@ async function login(page: any, email: string, password: string) {
   await expect(page.getByRole('link', { name: 'Acegrocer' })).toBeVisible()
 }
 
+async function registerViaApi(page: any, email: string, name: string) {
+  const r = await page.request.post('/api/auth/register', {
+    data: { email, name, password: PASSWORD },
+  })
+  if (r.status() !== 200) throw new Error('Failed to register via API')
+}
+
 test('PATCH /api/admin/orders updates status with admin auth', async ({ page }) => {
   const customerEmail = randomEmail('cust')
   const adminEmail = randomEmail('admin')
 
-  // Register customer and place an order
-  await page.goto('/register')
-  await page.locator('input#email').fill(customerEmail)
-  await page.locator('input#name').fill('Customer API Test')
-  await page.locator('input#password').fill(PASSWORD)
-  await page.getByRole('button', { name: /create account|sign up|register|submit/i }).click()
+  // Register customer via API and place an order
+  await registerViaApi(page, customerEmail, 'Customer API Test')
 
   await login(page, customerEmail, PASSWORD)
   await page.goto('/products')
@@ -46,11 +49,7 @@ test('PATCH /api/admin/orders updates status with admin auth', async ({ page }) 
   if (await logoutButton.count()) await logoutButton.click()
 
   // Register and promote admin
-  await page.goto('/register')
-  await page.locator('input#email').fill(adminEmail)
-  await page.locator('input#name').fill('Admin API Test')
-  await page.locator('input#password').fill(PASSWORD)
-  await page.getByRole('button', { name: /create account|sign up|register|submit/i }).click()
+  await registerViaApi(page, adminEmail, 'Admin API Test')
 
   // Promote via script (synchronously)
   const { execFileSync } = await import('child_process')

@@ -12,13 +12,11 @@ test('customer checkout and admin status update end-to-end', async ({ page, base
   const customerEmail = randomEmail('cust')
   const adminEmail = randomEmail('admin')
 
-  // Register customer
-  await page.goto('/register')
-  await page.locator('input#email').fill(customerEmail)
-  await page.locator('input#name').fill('Customer Test')
-  await page.locator('input#password').fill(PASSWORD)
-  const createBtn = page.getByRole('button', { name: /create account|sign up|register|submit/i })
-  await createBtn.click()
+  // Register customer via API to avoid UI flake
+  const r1 = await page.request.post('/api/auth/register', {
+    data: { email: customerEmail, name: 'Customer Test', password: PASSWORD },
+  })
+  expect(r1.status()).toBe(200)
 
   // Login customer
   await page.goto('/login')
@@ -65,12 +63,11 @@ test('customer checkout and admin status update end-to-end', async ({ page, base
     await page.goto('/')
   }
 
-  // Register admin
-  await page.goto('/register')
-  await page.locator('input#email').fill(adminEmail)
-  await page.locator('input#name').fill('Admin Test')
-  await page.locator('input#password').fill(PASSWORD)
-  await page.getByRole('button', { name: /create account|sign up|register|submit/i }).click()
+  // Register admin via API
+  const r2 = await page.request.post('/api/auth/register', {
+    data: { email: adminEmail, name: 'Admin Test', password: PASSWORD },
+  })
+  expect(r2.status()).toBe(200)
 
   // Promote admin via script
   execFileSync('node', ['scripts/make-admin.mjs', adminEmail], { stdio: 'inherit' })

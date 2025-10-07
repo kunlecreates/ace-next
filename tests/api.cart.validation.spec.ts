@@ -9,11 +9,12 @@ function rand(prefix: string) {
 
 async function registerAndLogin(page: any) {
   const email = `${rand('u')}@example.com`
-  await page.goto('/register')
-  await page.locator('input#email').fill(email)
-  await page.locator('input#name').fill('Cart Tester')
-  await page.locator('input#password').fill(PASSWORD)
-  await page.getByRole('button', { name: /create account|sign up|register|submit/i }).click()
+  // Register via API
+  const r = await page.request.post('/api/auth/register', {
+    data: { email, name: 'Cart Tester', password: PASSWORD },
+  })
+  expect(r.status()).toBe(200)
+  // Login via UI to establish browser cookies
   await page.goto('/login')
   await page.locator('input#email').fill(email)
   await page.locator('input#password').fill(PASSWORD)

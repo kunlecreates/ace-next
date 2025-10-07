@@ -8,12 +8,11 @@ function randomEmail(prefix: string) {
 const PASSWORD = 'ChangeMe123!'
 
 async function registerAndPromoteAdmin(page: any, email: string) {
-  // Register
-  await page.goto('/register')
-  await page.locator('input#email').fill(email)
-  await page.locator('input#name').fill('Admin Neg Test')
-  await page.locator('input#password').fill(PASSWORD)
-  await page.getByRole('button', { name: /create account|sign up|register|submit/i }).click()
+  // Register via API to avoid UI flake
+  const resp = await page.request.post('/api/auth/register', {
+    data: { email, name: 'Admin Neg Test', password: PASSWORD },
+  })
+  if (resp.status() !== 200) throw new Error('Failed to register admin via API')
   // Promote
   const { execFileSync } = await import('child_process')
   execFileSync('node', ['scripts/make-admin.mjs', email], { stdio: 'inherit' })
