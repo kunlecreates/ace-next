@@ -7,7 +7,7 @@ on:
         description: 'GHCR image repository (e.g., ghcr.io/kunlecreates/ace-next)'
         required: false
       image_tag:
-        description: 'Container image tag (defaults to commit SHA)'
+        description: 'Container image tag (defaults to latest)'
         required: false
       namespace:
         description: 'Kubernetes namespace (defaults to acegrocer-system)'
@@ -52,7 +52,7 @@ jobs:
           IMAGE_REPO="${{ inputs.image_repo }}"
           if [ -z "$IMAGE_REPO" ]; then IMAGE_REPO="ghcr.io/${GITHUB_REPOSITORY}"; fi
           IMAGE_TAG="${{ inputs.image_tag }}"
-          if [ -z "$IMAGE_TAG" ]; then IMAGE_TAG="${GITHUB_SHA}"; fi
+          if [ -z "$IMAGE_TAG" ]; then IMAGE_TAG="latest"; fi
           VALUES_FILE="${{ inputs.values_file }}"
           if [ -z "$VALUES_FILE" ]; then VALUES_FILE="k8s/staging.values.yaml"; fi
 
