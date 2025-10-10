@@ -28,7 +28,7 @@ on:
 jobs:
   deploy:
     name: Deploy to Kubernetes
-    runs-on: acegrocer-runnerset
+    runs-on: arc-runnerset
     env:
       RELEASE_NAME: acegrocer
     steps:

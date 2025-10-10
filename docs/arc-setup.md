@@ -15,6 +15,7 @@ References:
 - Deploy runner scale sets: https://docs.github.com/en/actions/tutorials/use-actions-runner-controller/deploy-runner-scale-sets
 - Authenticate to the API: https://docs.github.com/en/actions/tutorials/use-actions-runner-controller/authenticate-to-the-api
 - Use ARC in a workflow: https://docs.github.com/en/actions/tutorials/use-actions-runner-controller/use-arc-in-a-workflow
+- Security Hardening of self-hosted runners: https://docs.github.com/en/actions/reference/security/secure-use#hardening-for-self-hosted-runners
 
 ## 1) Install the ARC controller (Helm)
 
@@ -22,11 +23,11 @@ Install the GitHub-supported ARC controller chart into the controller namespace.
 
 ```bash
 # Controller namespace
-kubectl create namespace actions-runner-system --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace arc-system --dry-run=client -o yaml | kubectl apply -f -
 
 # Install the controller (CRDs + controller manager)
 helm install arc \
-  --namespace actions-runner-system \
+  --namespace arc-system \
   --create-namespace \
   oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
 ```
@@ -38,7 +39,7 @@ Note: cert-manager is NOT required for the GitHub-supported ARC charts.
 Per official docs, authenticate ARC to the GitHub API using a GitHub App or a PAT. GitHub App is recommended.
 
 Steps (summary):
-- Create a GitHub App owned by your org and install it to your org/repo.
+- Create a GitHub App owned by your github user account or org and install it to your org/repo.
   - GitHub → Settings → Developer settings → GitHub Apps → New GitHub App
   - Permissions (minimum):
     - Actions: Read & write
@@ -57,10 +58,10 @@ Create a secret in the RUNNER namespace (not the controller namespace):
 
 ```bash
 # Runners namespace
-kubectl create namespace acegrocer-runners --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace arc-runners --dry-run=client -o yaml | kubectl apply -f -
 
 # GitHub App credentials secret (create in runners namespace!)
-kubectl -n acegrocer-runners create secret generic github-app-credentials \
+kubectl -n arc-runners create secret generic github-app-credentials \
   --from-literal=github_app_id=<APP_ID> \
   --from-literal=github_app_installation_id=<INSTALLATION_ID> \
   --from-file=github_app_private_key=<path-to-private-key.pem>
@@ -75,9 +76,9 @@ ARC runner scale sets are installed via a separate chart in the runners namespac
 Recommended values to support Docker image builds (our CI builds and pushes images) use Docker-in-Docker (dind) mode:
 
 ```bash
-INSTALLATION_NAME="acegrocer-runnerset"
-NAMESPACE="acegrocer-runners"
-GITHUB_CONFIG_URL="https://github.com/kunlecreates/ace-next" # repo-level
+INSTALLATION_NAME="arc-runnerset"
+NAMESPACE="arc-runners"
+GITHUB_CONFIG_URL="https://github.com/kunlecreates/arc-deploy" # A separate private repo was used based on the security doc. See: “Security Hardening of self-hosted runners” docs linked above.
 
 helm install "$INSTALLATION_NAME" \
   --namespace "$NAMESPACE" \
@@ -89,8 +90,8 @@ helm install "$INSTALLATION_NAME" \
 ```
 
 Notes:
-- If you prefer specifying GitHub App values inline instead of a secret, see the docs’ `githubConfigSecret` object.
-- If your CI does not need to build container images, you can omit `containerMode.type="dind"`.
+- If you prefer specifying GitHub App values inline instead of a secret (not recommended), see the docs’ `githubConfigSecret` object.
+- If you do not need to build container images, in your private ARC repo, you can omit `containerMode.type="dind"`.
 
 ## 4) RBAC: allow runners to deploy the app to the app namespace
 
@@ -103,7 +104,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: arc-runner-sa
-  namespace: acegrocer-runners
+  namespace: arc-runners
 ```
 
 Role in the app namespace:
@@ -137,7 +138,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: arc-runner-sa
-    namespace: acegrocer-runners
+    namespace: arc-runners
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -176,14 +177,14 @@ imagePullSecrets:
 
 ## 6) Use ARC runners in workflows (runs-on)
 
-When using ARC runner scale sets, you target them with a single label equal to the Helm installation name (the `INSTALLATION_NAME`), e.g., `acegrocer-runnerset`. Additional labels (like `self-hosted`, `linux`, `k8s`) are not supported for ARC runners.
+When using ARC runner scale sets, you target them with a single label equal to the Helm installation name (the `INSTALLATION_NAME`), e.g., `arc-runnerset`. Additional labels (like `self-hosted`, `linux`, `k8s`) are not supported for ARC runners.
 
 Example workflow job:
 
 ```yaml
 jobs:
   deploy:
-    runs-on: acegrocer-runnerset
+    runs-on: arc-runnerset
     steps:
       - uses: actions/checkout@v4
       - run: echo "Using ARC scale set runner"
@@ -207,7 +208,7 @@ The workflow will lint the chart, create/update the app Secret and the registry 
 
 ## Next steps
 
-1. Complete in-cluster runner installation (steps 1–3), confirm a runner Pod becomes Ready in the `acegrocer-runners` namespace.
+1. Complete in-cluster runner installation (steps 1–3), confirm a runner Pod becomes Ready in the `arc-runners` namespace.
 2. Apply cross-namespace RBAC (step 4) so the runner can deploy into your target app namespace (default `acegrocer-system`).
 3. Add repo secrets: `JWT_SECRET` (required), and optionally `GHCR_READ_USERNAME`/`GHCR_READ_TOKEN` for private GHCR pulls.
 4. Trigger the "CD - Kubernetes (Helm)" workflow targeting your staging namespace and values file. Verify Helm lint and upgrade succeed.
