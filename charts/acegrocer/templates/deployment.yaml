@@ -1,3 +1,5 @@
+{{- $defaultSecretName := printf "%s-secrets" (include "acegrocer.fullname" .) -}}
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -44,7 +46,6 @@ spec:
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  {{- $defaultSecretName := printf "%s-secrets" (include "acegrocer.fullname" .) -}}
                   name: {{ default $defaultSecretName .Values.secret.name }}
                   key: JWT_SECRET
             - name: COOKIE_SAMESITE
