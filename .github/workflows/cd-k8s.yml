@@ -155,5 +155,7 @@ jobs:
       - name: Smoke test
         run: |
           # Try cluster IP first
-          kubectl -n "$NAMESPACE" run curl --rm -it --image=curlimages/curl:8.8.0 --restart=Never -- \
-            -fsS http://$RELEASE_NAME.$NAMESPACE.svc.cluster.local:3000/api/health
+          SERVICE_NAME="$(kubectl -n "$NAMESPACE" get svc -l app.kubernetes.io/instance=$RELEASE_NAME -o jsonpath='{.items[0].metadata.name}')"
+          echo "Detected Service: $SERVICE_NAME"
+          kubectl -n "$NAMESPACE" run curl --rm --image=curlimages/curl:8.8.0 --restart=Never -- \
+            -fsS http://$SERVICE_NAME.$NAMESPACE.svc.cluster.local:3000/api/health
