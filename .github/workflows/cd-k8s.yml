@@ -157,8 +157,17 @@ jobs:
           # Try cluster IP first
           SERVICE_NAME="$(kubectl -n "$NAMESPACE" get svc -l app.kubernetes.io/instance=$RELEASE_NAME -o jsonpath='{.items[0].metadata.name}')"
           echo "Detected Service: $SERVICE_NAME"
+
+          # Create ephemeral pod
           kubectl -n "$NAMESPACE" run curl-test --restart=Never --image=curlimages/curl:8.8.0 -- sleep 60
+          
+          # Wait for pod to be ready
+          kubectl -n "$NAMESPACE" wait --for=condition=Ready pod/curl-test --timeout=30s
+
+          # Execute the health check
           kubectl -n "$NAMESPACE" exec curl-test -- curl -fsS http://$SERVICE_NAME.$NAMESPACE.svc.cluster.local:3000/api/health
+
+          # Delete the pod
           kubectl -n "$NAMESPACE" delete pod curl-test
           
 
