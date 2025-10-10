@@ -65,11 +65,11 @@ affinity: {}
 tolerations: []
 
 ingress:
-  enabled: false
-  className: ""
+  enabled: true
+  className: "nginx"
   annotations: {}
   hosts:
-    - host: acegrocer.local
+    - host: ace-next.kunlecreates.org
       paths:
         - path: /
           pathType: Prefix
